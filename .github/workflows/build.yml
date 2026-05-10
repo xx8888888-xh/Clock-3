@@ -42,82 +42,65 @@ jobs:
           git \
           unzip \
           wget \
-          openjdk-17-jdk || echo "Some packages may not be installed"
-        echo "System dependencies installation completed"
+          openjdk-17-jdk || echo "Package installation completed"
     
-    - name: Set JAVA environment
+    - name: Setup Java
       run: |
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        if [ -d "$JAVA_HOME" ]; then
-          export PATH=$JAVA_HOME/bin:$PATH
-          java -version
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-        else
-          echo "Warning: JAVA_HOME not found"
+        if [ ! -d "$JAVA_HOME" ]; then
           JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-          echo "Found JAVA_HOME: $JAVA_HOME"
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
         fi
+        export PATH=$JAVA_HOME/bin:$PATH
+        java -version
+        echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+        echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV
     
     - name: Setup Android SDK
-      run: |
-        mkdir -p $HOME/android-sdk
-        cd $HOME/android-sdk
-        
-        if [ ! -f "cmdline-tools/latest/bin/sdkmanager" ]; then
-          echo "Downloading Android SDK cmdline-tools..."
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip
-          mkdir -p cmdline-tools/latest
-          mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
-        fi
-        
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-        
-        yes | sdkmanager --licenses 2>/dev/null || true
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" || echo "SDK installation completed"
-        
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "Android SDK setup completed"
-    
-    - name: Verify project structure
-      run: |
-        echo "=== Project Structure ==="
-        echo "Current directory: $(pwd)"
-        ls -la
-        echo "buildozer.spec exists: $([ -f buildozer.spec ] && echo 'YES' || echo 'NO')"
+      uses: android-actions/setup-android@v3
+      with:
+        api-level: 33
+        ndk-level: 25
+        build-tools: 33.0.2
     
     - name: Install Python dependencies
       run: |
         pip install --upgrade pip setuptools wheel
         pip install cython==0.29.37
         pip install -r requirements.txt
-        pip install buildozer
+        pip install buildozer==1.6.0
+    
+    - name: Verify project
+      run: |
+        echo "=== Project Files ==="
+        ls -la
+        echo "=== App Files ==="
+        ls -la app/
+        echo "=== buildozer.spec ==="
+        cat buildozer.spec
     
     - name: Build debug APK
+      id: build_apk
       run: |
-        export ANDROID_HOME=$HOME/android-sdk
-        export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
-        export ANDROID_SDK_ROOT=$ANDROID_HOME
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-        
-        echo "=== Build Environment ==="
-        echo "JAVA_HOME: $JAVA_HOME"
+        java -version
         echo "ANDROID_HOME: $ANDROID_HOME"
         echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
         
         buildozer android debug || {
-          echo "Build failed, checking for errors..."
-          find . -name "*.log" -type f 2>/dev/null | head -5
+          echo "=== Build failed, checking logs ==="
+          ls -la .buildozer/ 2>/dev/null || echo "No .buildozer directory"
+          find . -name "*.log" 2>/dev/null | head -5
           exit 1
         }
         
-        echo "Build completed!"
-        ls -la bin/ 2>/dev/null || echo "bin directory not found"
+        echo "=== Build completed ==="
+        ls -la bin/ 2>/dev/null || echo "Checking for APK files..."
+        find . -name "*.apk" -type f 2>/dev/null
+      timeout-minutes: 90
+    
+    - name: List APK files
+      run: |
+        echo "=== APK Files ==="
+        find . -name "*.apk" -type f -exec ls -lh {} \; 2>/dev/null || echo "No APK files found"
     
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
