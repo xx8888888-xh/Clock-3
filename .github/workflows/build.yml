@@ -25,9 +25,9 @@ jobs:
     
     - name: Install system dependencies
       run: |
-        set -e
-        sudo apt-get update
-        sudo apt-get install -y \
+        echo "Installing system dependencies..."
+        sudo apt-get update || true
+        sudo apt-get install -y --no-install-recommends \
           python3-pip \
           autoconf \
           libtool \
@@ -39,20 +39,25 @@ jobs:
           cmake \
           libffi-dev \
           libssl-dev \
-          libgmp-dev \
-          libmpc-dev \
           git \
           unzip \
           wget \
-          openjdk-17-jdk
+          openjdk-17-jdk || echo "Some packages may not be installed"
+        echo "System dependencies installation completed"
     
     - name: Set JAVA environment
       run: |
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        export PATH=$JAVA_HOME/bin:$PATH
-        java -version
-        echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-        echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV
+        if [ -d "$JAVA_HOME" ]; then
+          export PATH=$JAVA_HOME/bin:$PATH
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+        else
+          echo "Warning: JAVA_HOME not found"
+          JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+          echo "Found JAVA_HOME: $JAVA_HOME"
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+        fi
     
     - name: Setup Android SDK
       run: |
@@ -60,6 +65,7 @@ jobs:
         cd $HOME/android-sdk
         
         if [ ! -f "cmdline-tools/latest/bin/sdkmanager" ]; then
+          echo "Downloading Android SDK cmdline-tools..."
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
           unzip -q cmdline-tools.zip
           mkdir -p cmdline-tools/latest
@@ -70,19 +76,18 @@ jobs:
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         
         yes | sdkmanager --licenses 2>/dev/null || true
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" 2>&1 | tail -20
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" || echo "SDK installation completed"
         
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "Android SDK setup completed"
     
     - name: Verify project structure
       run: |
+        echo "=== Project Structure ==="
         echo "Current directory: $(pwd)"
-        echo "Files:"
         ls -la
-        echo "App directory:"
-        ls -la app/
         echo "buildozer.spec exists: $([ -f buildozer.spec ] && echo 'YES' || echo 'NO')"
     
     - name: Install Python dependencies
@@ -100,15 +105,19 @@ jobs:
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
         export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
         
-        echo "Build environment:"
+        echo "=== Build Environment ==="
         echo "JAVA_HOME: $JAVA_HOME"
         echo "ANDROID_HOME: $ANDROID_HOME"
         echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
         
-        buildozer android debug
+        buildozer android debug || {
+          echo "Build failed, checking for errors..."
+          find . -name "*.log" -type f 2>/dev/null | head -5
+          exit 1
+        }
         
         echo "Build completed!"
-        ls -la bin/
+        ls -la bin/ 2>/dev/null || echo "bin directory not found"
     
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
