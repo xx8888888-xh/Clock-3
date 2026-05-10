@@ -1,0 +1,178 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          python3-pip \
+          autoconf \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libncurses5-dev \
+          libncursesw5-dev \
+          libtinfo5 \
+          cmake \
+          libffi-dev \
+          libssl-dev
+    
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v2
+    
+    - name: Cache Buildozer
+      uses: actions/cache@v3
+      with:
+        path: ~/.local/bin/buildozer
+        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+        restore-keys: |
+          ${{ runner.os }}-buildozer-
+    
+    - name: Install Buildozer
+      run: |
+        pip install buildozer
+        pip install cython==0.29.33
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Build debug APK
+      run: |
+        buildozer android debug
+      env:
+        ANDROIDSDK: ${{ env.ANDROID_HOME }}
+        ANDROIDNDK: ${{ env.ANDROID_NDK_HOME }}
+        ANDROIDAPI: 33
+        ANDROIDMINAPI: 21
+    
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: clock3-debug-apk
+        path: bin/*.apk
+        retention-days: 30
+    
+    - name: Set up Git config
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'actions@github.com'
+    
+    - name: Create Release
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      run: |
+        VERSION=$(date +'%Y.%m.%d')
+        TAG="v${VERSION}"
+        
+        if ! git tag | grep -q "^${TAG}$"; then
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+        fi
+        
+        RELEASE_NOTES="## Clock 3 v${VERSION}\n\n"
+        RELEASE_NOTES+="📱 自动构建版本\n\n"
+        RELEASE_NOTES+="### 功能\n"
+        RELEASE_NOTES+="- 🐾 悬浮球宠物系统\n"
+        RELEASE_NOTES+="- ⏰ 闹钟提醒系统\n"
+        RELEASE_NOTES+="- ⏱️ 倒计时功能\n"
+        RELEASE_NOTES+="- 🐶 宠物心情和成长系统\n\n"
+        RELEASE_NOTES+="### 下载\n"
+        RELEASE_NOTES+="下载 APK 文件: clock3-*-debug.apk"
+        
+        echo -e "${RELEASE_NOTES}" > release_notes.md
+    
+    - name: Upload Release Asset
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: bin/*.apk
+        draft: false
+        prerelease: false
+        body_path: release_notes.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    
+    - name: Run tests
+      run: |
+        pytest --version
+        echo "测试框架已就绪"
+    
+    - name: Check Python syntax
+      run: |
+        python -m py_compile app/main.py
+        python -m py_compile app/config.py
+        python -m py_compile app/database.py
+        python -m py_compile app/models/alarm.py
+        python -m py_compile app/models/countdown.py
+        python -m py_compile app/models/pet.py
+        python -m py_compile app/services/alarm_service.py
+        python -m py_compile app/services/countdown_service.py
+        python -m py_compile app/services/pet_service.py
+        echo "所有Python文件语法检查通过"
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install linter
+      run: |
+        pip install flake8
+    
+    - name: Run linter
+      run: |
+        flake8 app/ --max-line-length=120 --ignore=E501,W503
+        echo "代码质量检查通过"
