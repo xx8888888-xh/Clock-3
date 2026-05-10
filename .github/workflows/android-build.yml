@@ -49,7 +49,6 @@ jobs:
     - name: Create local.properties
       run: |
         echo "sdk.dir=$ANDROID_HOME" > android/local.properties
-        cat android/local.properties
 
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
@@ -60,61 +59,39 @@ jobs:
       working-directory: ./android
       run: |
         gradle wrapper --gradle-version=${{ env.GRADLE_VERSION }}
+        chmod +x gradlew
         ls -la gradle/wrapper/
-        file gradle/wrapper/gradle-wrapper.jar
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x android/gradlew
 
     - name: Build debug APK
       working-directory: ./android
-      continue-on-error: false
       run: |
-        echo "=== Java Version ==="
-        java -version
-        echo ""
-        echo "=== Gradle Version ==="
-        ./gradlew --version
-        echo ""
-        echo "=== Android SDK ==="
-        echo "ANDROID_HOME=$ANDROID_HOME"
-        ls -la $ANDROID_HOME/
-        echo ""
-        echo "=== Project Structure ==="
-        ls -la
-        echo ""
-        echo "=== Building APK (started at $(date)) ==="
+        echo "=== Build Started at $(date) ==="
         ./gradlew clean assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
         BUILD_EXIT=$?
+        echo ""
         echo "=== Build finished at $(date) with exit code $BUILD_EXIT ==="
-        if [ $BUILD_EXIT -ne 0 ]; then
-          echo "=== LAST 300 LINES OF LOG ==="
-          tail -300 build.log
-        fi
         exit $BUILD_EXIT
 
-    - name: Display APK info
-      if: success()
+    - name: Check build output
+      working-directory: ./android
       run: |
-        echo "=== APK Build Results ==="
-        find android -name "*.apk" -type f
-        ls -lh android/app/build/outputs/apk/debug/ 2>/dev/null || echo "APK dir not found"
+        echo "=== Checking build directory ==="
+        find . -type d -name "build" 2>/dev/null
+        echo ""
+        echo "=== Checking APK directory ==="
+        ls -laR app/build/outputs/ 2>/dev/null || echo "outputs directory not found"
+        echo ""
+        echo "=== Finding all APK files ==="
+        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
 
     - name: Upload APK artifact
-      if: success()
+      working-directory: ./android
       uses: actions/upload-artifact@v4
       with:
-        name: clock3-debug-apk-${{ github.run_number }}
+        name: clock3-debug-apk
         path: |
-          android/app/build/outputs/apk/debug/*.apk
-          android/app/build/outputs/**/*.apk
+          app/build/outputs/apk/debug/*.apk
+          app/build/outputs/**/*.apk
+          build.log
         retention-days: 30
         overwrite: true
-
-    - name: Upload build log
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-log-${{ github.run_number }}
-        path: android/build.log
-        retention-days: 7
