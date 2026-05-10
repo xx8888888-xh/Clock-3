@@ -17,86 +17,104 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
 
     - name: Set up JDK ${{ env.JAVA_VERSION }}
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: ${{ env.JAVA_VERSION }}
-        cache: 'gradle'
 
-    - name: Cache Android SDK
+    - name: Cache Gradle packages
       uses: actions/cache@v4
-      id: cache-android-sdk
       with:
         path: |
-          ~/.android/sdk
-          ~/Library/Android/sdk
-          /opt/android-sdk
-        key: android-sdk-v2-${{ runner.os }}
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('android/*.gradle.kts', 'android/app/*.gradle.kts') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
 
-    - name: Install Android SDK
-      if: steps.cache-android-sdk.outputs.cache-hit != 'true'
-      run: |
-        mkdir -p ~/.android/sdk
-        cd ~/.android/sdk
-        curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
-        unzip -q cmdline-tools.zip
-        mkdir -p cmdline-tools/latest
-        mv cmdline-tools/bin cmdline-tools/latest/
-        mv cmdline-tools/lib cmdline-tools/latest/
-        rm cmdline-tools.zip
-
-    - name: Accept Android licenses
-      run: |
-        export ANDROID_HOME=~/.android/sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-        yes | sdkmanager --licenses 2>/dev/null || true
-        sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" --channel=0
+    - name: Setup Android SDK
+      id: setup-sdk
+      uses: android-actions/setup-android@v2
+      with:
+        packages: |
+          platforms;android-34
+          build-tools;34.0.0
+          platform-tools
+        api-level: 34
 
     - name: Create local.properties
       run: |
-        echo "sdk.dir=$HOME/.android/sdk" > android/local.properties
-        cat android/local.properties
+        echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+        echo "sdk.dir=$ANDROID_HOME"
+
+    - name: Check project structure
+      run: |
+        echo "=== Project Structure ==="
+        ls -la android/
+        echo ""
+        echo "=== Gradle Files ==="
+        find android -name "*.gradle*" -type f
+
+    - name: Check gradle wrapper
+      run: |
+        echo "=== Gradle Wrapper ==="
+        ls -la android/gradle/wrapper/
+        file android/gradle/wrapper/gradle-wrapper.jar
 
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
 
     - name: Build debug APK
+      id: build
       working-directory: ./android
-      env:
-        ANDROID_HOME: ${{ runner.os == 'macOS' && format('{0}/Library/Android/sdk', runner.workspace) || '~/.android/sdk' }}
+      continue-on-error: false
       run: |
-        export ANDROID_HOME=~/.android/sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-        ./gradlew assembleDebug --no-daemon --stacktrace --info 2>&1 | tee build.log
+        echo "=== Starting Build at $(date) ==="
+        ./gradlew --version
+        echo ""
+        echo "=== Building APK ==="
+        ./gradlew clean assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+        BUILD_EXIT_CODE=${PIPESTATUS[0]}
+        echo "=== Build Exit Code: $BUILD_EXIT_CODE ==="
+        echo "=== Build finished at $(date) ==="
+        exit $BUILD_EXIT_CODE
 
-    - name: Show build log on failure
+    - name: Show last 100 lines of build log
       if: failure()
       run: |
-        echo "=== Build Log (last 200 lines) ==="
-        tail -200 android/build.log 2>/dev/null || echo "No build log found"
+        echo "=== Last 100 lines of build.log ==="
+        tail -100 android/build.log 2>/dev/null || echo "No build log found"
 
     - name: Display APK info
-      if: success()
       run: |
         echo "=== APK Build Results ==="
-        ls -lh android/app/build/outputs/apk/debug/ 2>/dev/null || echo "No APK found"
+        if [ -d "android/app/build/outputs/apk/debug" ]; then
+          ls -lh android/app/build/outputs/apk/debug/
+          find android -name "*.apk" -type f 2>/dev/null
+        else
+          echo "APK directory not found"
+          echo "Checking build directory..."
+          find android -type d -name "build" 2>/dev/null
+        fi
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
-      if: success()
       with:
         name: clock3-debug-apk-${{ github.run_number }}
         path: |
           android/app/build/outputs/apk/debug/*.apk
+          android/app/build/outputs/**/*.apk
         retention-days: 30
         overwrite: true
 
     - name: Upload build log
-      uses: actions/upload-artifact@v4
       if: failure()
+      uses: actions/upload-artifact@v4
       with:
-        name: build-log
+        name: build-log-${{ github.run_number }}
         path: android/build.log
         retention-days: 7
