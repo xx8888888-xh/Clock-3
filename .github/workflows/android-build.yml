@@ -37,7 +37,6 @@ jobs:
           ${{ runner.os }}-gradle-
 
     - name: Setup Android SDK
-      id: setup-sdk
       uses: android-actions/setup-android@v2
       with:
         packages: |
@@ -49,27 +48,18 @@ jobs:
     - name: Create local.properties
       run: |
         echo "sdk.dir=$ANDROID_HOME" > android/local.properties
-        echo "sdk.dir=$ANDROID_HOME"
 
-    - name: Check project structure
+    - name: Download gradle wrapper
+      working-directory: ./android
       run: |
-        echo "=== Project Structure ==="
-        ls -la android/
-        echo ""
-        echo "=== Gradle Files ==="
-        find android -name "*.gradle*" -type f
-
-    - name: Check gradle wrapper
-      run: |
-        echo "=== Gradle Wrapper ==="
-        ls -la android/gradle/wrapper/
-        file android/gradle/wrapper/gradle-wrapper.jar
+        mkdir -p gradle/wrapper
+        curl -sL -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.6.0/gradle/wrapper/gradle-wrapper.jar
+        ls -la gradle/wrapper/
 
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
 
     - name: Build debug APK
-      id: build
       working-directory: ./android
       continue-on-error: false
       run: |
@@ -77,29 +67,20 @@ jobs:
         ./gradlew --version
         echo ""
         echo "=== Building APK ==="
-        ./gradlew clean assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
-        BUILD_EXIT_CODE=${PIPESTATUS[0]}
-        echo "=== Build Exit Code: $BUILD_EXIT_CODE ==="
+        ./gradlew clean assembleDebug --no-daemon 2>&1 | tee build.log
         echo "=== Build finished at $(date) ==="
-        exit $BUILD_EXIT_CODE
 
-    - name: Show last 100 lines of build log
+    - name: Show build log on failure
       if: failure()
       run: |
-        echo "=== Last 100 lines of build.log ==="
-        tail -100 android/build.log 2>/dev/null || echo "No build log found"
+        echo "=== Last 200 lines of build.log ==="
+        tail -200 android/build.log 2>/dev/null || echo "No build log found"
 
     - name: Display APK info
       run: |
         echo "=== APK Build Results ==="
-        if [ -d "android/app/build/outputs/apk/debug" ]; then
-          ls -lh android/app/build/outputs/apk/debug/
-          find android -name "*.apk" -type f 2>/dev/null
-        else
-          echo "APK directory not found"
-          echo "Checking build directory..."
-          find android -type d -name "build" 2>/dev/null
-        fi
+        find android -name "*.apk" -type f 2>/dev/null && ls -lh android/app/build/outputs/apk/debug/ 2>/dev/null || echo "Checking build directory..."
+        find android -type d -name "build" 2>/dev/null | head -5
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
