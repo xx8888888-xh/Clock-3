@@ -9,6 +9,7 @@ on:
 
 env:
   JAVA_VERSION: '17'
+  GRADLE_VERSION: '8.6'
 
 jobs:
   build:
@@ -48,13 +49,19 @@ jobs:
     - name: Create local.properties
       run: |
         echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+        cat android/local.properties
 
-    - name: Download gradle wrapper
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: ${{ env.GRADLE_VERSION }}
+
+    - name: Generate Gradle Wrapper
       working-directory: ./android
       run: |
-        mkdir -p gradle/wrapper
-        curl -sL -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.6.0/gradle/wrapper/gradle-wrapper.jar
+        gradle wrapper --gradle-version=${{ env.GRADLE_VERSION }}
         ls -la gradle/wrapper/
+        file gradle/wrapper/gradle-wrapper.jar
 
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
@@ -63,26 +70,38 @@ jobs:
       working-directory: ./android
       continue-on-error: false
       run: |
-        echo "=== Starting Build at $(date) ==="
+        echo "=== Java Version ==="
+        java -version
+        echo ""
+        echo "=== Gradle Version ==="
         ./gradlew --version
         echo ""
-        echo "=== Building APK ==="
-        ./gradlew clean assembleDebug --no-daemon 2>&1 | tee build.log
-        echo "=== Build finished at $(date) ==="
-
-    - name: Show build log on failure
-      if: failure()
-      run: |
-        echo "=== Last 200 lines of build.log ==="
-        tail -200 android/build.log 2>/dev/null || echo "No build log found"
+        echo "=== Android SDK ==="
+        echo "ANDROID_HOME=$ANDROID_HOME"
+        ls -la $ANDROID_HOME/
+        echo ""
+        echo "=== Project Structure ==="
+        ls -la
+        echo ""
+        echo "=== Building APK (started at $(date)) ==="
+        ./gradlew clean assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+        BUILD_EXIT=$?
+        echo "=== Build finished at $(date) with exit code $BUILD_EXIT ==="
+        if [ $BUILD_EXIT -ne 0 ]; then
+          echo "=== LAST 300 LINES OF LOG ==="
+          tail -300 build.log
+        fi
+        exit $BUILD_EXIT
 
     - name: Display APK info
+      if: success()
       run: |
         echo "=== APK Build Results ==="
-        find android -name "*.apk" -type f 2>/dev/null && ls -lh android/app/build/outputs/apk/debug/ 2>/dev/null || echo "Checking build directory..."
-        find android -type d -name "build" 2>/dev/null | head -5
+        find android -name "*.apk" -type f
+        ls -lh android/app/build/outputs/apk/debug/ 2>/dev/null || echo "APK dir not found"
 
     - name: Upload APK artifact
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: clock3-debug-apk-${{ github.run_number }}
