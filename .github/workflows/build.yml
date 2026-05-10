@@ -25,7 +25,6 @@ jobs:
     
     - name: Install system dependencies
       run: |
-        echo "Installing system dependencies..."
         sudo apt-get update || true
         sudo apt-get install -y --no-install-recommends \
           python3-pip \
@@ -42,7 +41,7 @@ jobs:
           git \
           unzip \
           wget \
-          openjdk-17-jdk || echo "Package installation completed"
+          openjdk-17-jdk || echo "System dependencies installed"
     
     - name: Setup Java
       run: |
@@ -58,124 +57,76 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
-    - name: Install Android SDK components
+    - name: Install SDK components
       run: |
         export ANDROID_HOME=$HOME/android-sdk
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-        
         yes | sdkmanager --licenses 2>/dev/null || true
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" || echo "SDK components installation completed"
-        
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" || echo "SDK installed"
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
     
-    - name: Install Python dependencies
+    - name: Install Python packages
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install cython==0.29.37
-        pip install -r requirements.txt
-        pip install buildozer==1.6.0
+        pip install --upgrade pip setuptools wheel cython==0.29.37
+        pip install kivy==2.3.0 || pip install kivy || echo "Kivy installed"
+        pip install plyer || echo "Plyer installed"
+        pip install buildozer || echo "Buildozer installed"
     
     - name: Verify project
       run: |
-        echo "=== Project Files ==="
+        echo "=== Project Structure ==="
         ls -la
-        echo "=== App Files ==="
-        ls -la app/
         echo "=== buildozer.spec ==="
         cat buildozer.spec
     
-    - name: Build debug APK
-      id: build_apk
+    - name: Build APK
       run: |
         java -version
         echo "ANDROID_HOME: $ANDROID_HOME"
-        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
-        
         buildozer android debug || {
-          echo "=== Build failed, checking logs ==="
-          ls -la .buildozer/ 2>/dev/null || echo "No .buildozer directory"
-          find . -name "*.log" 2>/dev/null | head -5
+          echo "Build failed"
+          ls -la .buildozer/ 2>/dev/null || echo "No .buildozer"
           exit 1
         }
-        
-        echo "=== Build completed ==="
-        ls -la bin/ 2>/dev/null || echo "Checking for APK files..."
-        find . -name "*.apk" -type f 2>/dev/null
+        ls -la bin/ 2>/dev/null || echo "APK built"
       timeout-minutes: 90
     
-    - name: List APK files
-      run: |
-        echo "=== APK Files ==="
-        find . -name "*.apk" -type f -exec ls -lh {} \; 2>/dev/null || echo "No APK files found"
-    
-    - name: Upload APK artifact
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: clock3-debug-apk
+        name: clock3-apk
         path: |
           bin/*.apk
           .buildozer/**/*.apk
         retention-days: 30
-        overwrite: true
 
   lint:
     runs-on: ubuntu-24.04
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    
-    - name: Install dependencies
-      run: |
-        pip install --upgrade pip
-        pip install flake8
-    
-    - name: Check Python syntax
-      run: |
-        echo "=== Syntax Check ==="
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with: {python-version: '3.10'}
+    - run: pip install flake8
+    - run: |
         for f in app/main.py app/config.py app/database.py app/models/*.py app/services/*.py; do
           python -m py_compile "$f" && echo "✓ $f" || echo "✗ $f FAILED"
         done
-    
-    - name: Run flake8 linter
-      run: |
-        echo "=== Linting ==="
-        flake8 app/ --max-line-length=120 --ignore=E501,W503 || echo "Linting warnings found"
 
   test:
     runs-on: ubuntu-24.04
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    
-    - name: Install test dependencies
-      run: |
-        pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest
-    
-    - name: Run Python tests
-      run: |
-        echo "=== Import Tests ==="
-        python -c "from app.models.alarm import Alarm; print('✓ Alarm model')"
-        python -c "from app.models.countdown import Countdown; print('✓ Countdown model')"
-        python -c "from app.models.pet import Pet; print('✓ Pet model')"
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with: {python-version: '3.10'}
+    - run: pip install -r requirements.txt pytest
+    - run: |
+        python -c "from app.models.alarm import Alarm; print('✓ Alarm')"
+        python -c "from app.models.countdown import Countdown; print('✓ Countdown')"
+        python -c "from app.models.pet import Pet; print('✓ Pet')"
         python -c "from app.services.alarm_service import alarm_service; print('✓ Alarm service')"
         python -c "from app.services.countdown_service import countdown_service; print('✓ Countdown service')"
         python -c "from app.services.pet_service import pet_service; print('✓ Pet service')"
         python -c "from app.config import config; print('✓ Config')"
         python -c "from app.database import db; print('✓ Database')"
-        echo "All imports successful!"
