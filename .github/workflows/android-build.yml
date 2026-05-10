@@ -7,91 +7,36 @@ on:
     branches: [ kotlin-version ]
   workflow_dispatch:
 
-env:
-  JAVA_VERSION: '17'
-  GRADLE_VERSION: '8.6'
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up JDK ${{ env.JAVA_VERSION }}
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: ${{ env.JAVA_VERSION }}
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-    - name: Cache Gradle packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('android/*.gradle.kts', 'android/app/*.gradle.kts') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v2
-      with:
-        packages: |
-          platforms;android-34
-          build-tools;34.0.0
-          platform-tools
-        api-level: 34
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
 
-    - name: Create local.properties
-      run: |
-        echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: ${{ env.GRADLE_VERSION }}
+      - name: Build with Gradle
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
 
-    - name: Generate Gradle Wrapper
-      working-directory: ./android
-      run: |
-        gradle wrapper --gradle-version=${{ env.GRADLE_VERSION }}
-        chmod +x gradlew
-        ls -la gradle/wrapper/
-
-    - name: Build debug APK
-      working-directory: ./android
-      run: |
-        echo "=== Build Started at $(date) ==="
-        ./gradlew clean assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
-        BUILD_EXIT=$?
-        echo ""
-        echo "=== Build finished at $(date) with exit code $BUILD_EXIT ==="
-        exit $BUILD_EXIT
-
-    - name: Check build output
-      working-directory: ./android
-      run: |
-        echo "=== Checking build directory ==="
-        find . -type d -name "build" 2>/dev/null
-        echo ""
-        echo "=== Checking APK directory ==="
-        ls -laR app/build/outputs/ 2>/dev/null || echo "outputs directory not found"
-        echo ""
-        echo "=== Finding all APK files ==="
-        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
-
-    - name: Upload APK artifact
-      working-directory: ./android
-      uses: actions/upload-artifact@v4
-      with:
-        name: clock3-debug-apk
-        path: |
-          app/build/outputs/apk/debug/*.apk
-          app/build/outputs/**/*.apk
-          build.log
-        retention-days: 30
-        overwrite: true
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
