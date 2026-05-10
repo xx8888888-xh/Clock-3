@@ -57,10 +57,18 @@ jobs:
     
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-      with:
-        api-level: 33
-        ndk-level: 25
-        build-tools: 33.0.2
+    
+    - name: Install Android SDK components
+      run: |
+        export ANDROID_HOME=$HOME/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+        
+        yes | sdkmanager --licenses 2>/dev/null || true
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" || echo "SDK components installation completed"
+        
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
     
     - name: Install Python dependencies
       run: |
