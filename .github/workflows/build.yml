@@ -9,23 +9,23 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  BUILD_DURATION_SECONDS: 0
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     
     - name: Install system dependencies
       run: |
+        set -e
         sudo apt-get update
         sudo apt-get install -y \
           python3-pip \
@@ -43,17 +43,18 @@ jobs:
           libmpc-dev \
           git \
           unzip \
-          openjdk-17-jdk \
-          wget
+          wget \
+          openjdk-17-jdk
     
-    - name: Set JAVA_HOME
+    - name: Set JAVA environment
       run: |
-        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+        export PATH=$JAVA_HOME/bin:$PATH
         java -version
+        echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+        echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV
     
-    - name: Download Android SDK
-      id: android-sdk
+    - name: Setup Android SDK
       run: |
         mkdir -p $HOME/android-sdk
         cd $HOME/android-sdk
@@ -68,93 +69,49 @@ jobs:
         export ANDROID_HOME=$HOME/android-sdk
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         
-        yes | sdkmanager --licenses > /dev/null 2>&1 || true
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" || echo "SDK installation completed with warnings"
+        yes | sdkmanager --licenses 2>/dev/null || true
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" 2>&1 | tail -20
         
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools" >> $GITHUB_ENV
-        
-        echo "Android SDK setup complete"
     
-    - name: Verify buildozer.spec exists
+    - name: Verify project structure
       run: |
-        ls -la buildozer.spec
-        echo "--- buildozer.spec content ---"
-        cat buildozer.spec
+        echo "Current directory: $(pwd)"
+        echo "Files:"
+        ls -la
+        echo "App directory:"
+        ls -la app/
+        echo "buildozer.spec exists: $([ -f buildozer.spec ] && echo 'YES' || echo 'NO')"
     
     - name: Install Python dependencies
       run: |
-        pip install --upgrade pip
-        pip install setuptools wheel
+        pip install --upgrade pip setuptools wheel
         pip install cython==0.29.37
         pip install -r requirements.txt
-        pip install buildozer==1.5.0
-    
-    - name: Prepare Buildozer environment
-      run: |
-        mkdir -p ~/.buildozer
-        mkdir -p bin
-        mkdir -p .buildozer
-        
-        if [ ! -f buildozer.spec ]; then
-          echo "ERROR: buildozer.spec not found!"
-          exit 1
-        fi
+        pip install buildozer
     
     - name: Build debug APK
-      id: build
       run: |
         export ANDROID_HOME=$HOME/android-sdk
         export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
         export ANDROID_SDK_ROOT=$ANDROID_HOME
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+        export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
         
+        echo "Build environment:"
         echo "JAVA_HOME: $JAVA_HOME"
         echo "ANDROID_HOME: $ANDROID_HOME"
         echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
-        echo "Current directory: $(pwd)"
-        echo "Files in current directory:"
-        ls -la
         
-        buildozer android debug || {
-          echo "Buildozer build failed, checking logs..."
-          find . -name "*.log" -type f 2>/dev/null | head -5
-          exit 1
-        }
-      working-directory: .
-      timeout-minutes: 60
-      continue-on-error: true
-    
-    - name: Check for APK
-      id: check-apk
-      run: |
-        echo "Checking for APK files..."
-        echo "Current directory contents:"
-        ls -la
+        buildozer android debug
         
-        if [ -d "bin" ]; then
-          echo "bin/ directory contents:"
-          ls -lh bin/
-        fi
-        
-        echo "Searching for APK files:"
-        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
-        
-        APK_COUNT=$(find . -name "*.apk" -type f 2>/dev/null | wc -l)
-        echo "Found $APK_COUNT APK file(s)"
-        
-        if [ $APK_COUNT -eq 0 ]; then
-          echo "WARNING: No APK files found!"
-          echo "Build directory contents:"
-          ls -la .buildozer/ 2>/dev/null || echo ".buildozer directory not found"
-        fi
+        echo "Build completed!"
+        ls -la bin/
     
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
-      if: always()
       with:
         name: clock3-debug-apk
         path: |
@@ -162,24 +119,16 @@ jobs:
           .buildozer/**/*.apk
         retention-days: 30
         overwrite: true
-    
-    - name: Display Build Summary
-      if: always()
-      run: |
-        echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
-        echo "- Build Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-        echo "- APK Check: ${{ steps.check-apk.outputs.apk-found || 'Unknown' }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Build Time: $(date)" >> $GITHUB_STEP_SUMMARY
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     
@@ -190,31 +139,25 @@ jobs:
     
     - name: Check Python syntax
       run: |
-        echo "Checking Python syntax..."
-        python -m py_compile app/main.py && echo "✓ main.py OK"
-        python -m py_compile app/config.py && echo "✓ config.py OK"
-        python -m py_compile app/database.py && echo "✓ database.py OK"
-        python -m py_compile app/models/alarm.py && echo "✓ models/alarm.py OK"
-        python -m py_compile app/models/countdown.py && echo "✓ models/countdown.py OK"
-        python -m py_compile app/models/pet.py && echo "✓ models/pet.py OK"
-        python -m py_compile app/services/alarm_service.py && echo "✓ services/alarm_service.py OK"
-        python -m py_compile app/services/countdown_service.py && echo "✓ services/countdown_service.py OK"
-        python -m py_compile app/services/pet_service.py && echo "✓ services/pet_service.py OK"
+        echo "=== Syntax Check ==="
+        for f in app/main.py app/config.py app/database.py app/models/*.py app/services/*.py; do
+          python -m py_compile "$f" && echo "✓ $f" || echo "✗ $f FAILED"
+        done
     
     - name: Run flake8 linter
       run: |
-        echo "Running flake8 linter..."
-        flake8 app/ --max-line-length=120 --ignore=E501,W503 || echo "Linting completed with warnings"
+        echo "=== Linting ==="
+        flake8 app/ --max-line-length=120 --ignore=E501,W503 || echo "Linting warnings found"
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     
@@ -226,13 +169,13 @@ jobs:
     
     - name: Run Python tests
       run: |
-        echo "Testing Python imports..."
-        python -c "from app.models.alarm import Alarm; print('✓ Alarm model imports successfully')"
-        python -c "from app.models.countdown import Countdown; print('✓ Countdown model imports successfully')"
-        python -c "from app.models.pet import Pet; print('✓ Pet model imports successfully')"
-        python -c "from app.services.alarm_service import alarm_service; print('✓ Alarm service imports successfully')"
-        python -c "from app.services.countdown_service import countdown_service; print('✓ Countdown service imports successfully')"
-        python -c "from app.services.pet_service import pet_service; print('✓ Pet service imports successfully')"
-        python -c "from app.config import config; print('✓ Config imports successfully')"
-        python -c "from app.database import db; print('✓ Database imports successfully')"
+        echo "=== Import Tests ==="
+        python -c "from app.models.alarm import Alarm; print('✓ Alarm model')"
+        python -c "from app.models.countdown import Countdown; print('✓ Countdown model')"
+        python -c "from app.models.pet import Pet; print('✓ Pet model')"
+        python -c "from app.services.alarm_service import alarm_service; print('✓ Alarm service')"
+        python -c "from app.services.countdown_service import countdown_service; print('✓ Countdown service')"
+        python -c "from app.services.pet_service import pet_service; print('✓ Pet service')"
+        python -c "from app.config import config; print('✓ Config')"
+        python -c "from app.database import db; print('✓ Database')"
         echo "All imports successful!"
