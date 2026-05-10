@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Clock 3</string>
+    <string name="app_description">智能桌面宠物闹钟</string>
+
+    <!-- Main Menu -->
+    <string name="menu_alarms">⏰ 闹钟列表</string>
+    <string name="menu_add_alarm">➕ 新建闹钟</string>
+    <string name="menu_countdown">⏱️ 倒计时</string>
+    <string name="menu_pet_status">🐶 宠物状态</string>
+    <string name="menu_settings">⚙️ 设置</string>
+    <string name="menu_export">📤 导出数据</string>
+    <string name="menu_import">📥 导入数据</string>
+    <string name="menu_close">❌ 关闭</string>
+
+    <!-- Alarm -->
+    <string name="alarm_label">闹钟名称</string>
+    <string name="alarm_content">提醒内容</string>
+    <string name="alarm_time">时间</string>
+    <string name="alarm_repeat">重复</string>
+    <string name="alarm_save">💾 保存</string>
+    <string name="alarm_delete">🗑️ 删除</string>
+    <string name="alarm_snooze">💤 贪睡</string>
+    <string name="alarm_dismiss">✓ 关闭</string>
+    <string name="alarm_no_alarms">暂无闹钟</string>
+    <string name="alarm_next">下一个</string>
+
+    <!-- Repeat Types -->
+    <string name="repeat_once">一次</string>
+    <string name="repeat_daily">每天</string>
+    <string name="repeat_workdays">工作日</string>
+    <string name="repeat_weekend">周末</string>
+    <string name="repeat_custom">自定义</string>
+
+    <!-- Countdown -->
+    <string name="countdown_title">⏱️ 倒计时</string>
+    <string name="countdown_start">▶️ 开始</string>
+    <string name="countdown_pause">⏸️ 暂停</string>
+    <string name="countdown_resume">▶️ 继续</string>
+    <string name="countdown_reset">🔄 重置</string>
+    <string name="countdown_complete">🎉 完成!</string>
+    <string name="countdown_minutes">分</string>
+    <string name="countdown_seconds">秒</string>
+
+    <!-- Pet -->
+    <string name="pet_name">小宠物</string>
+    <string name="pet_mood">心情</string>
+    <string name="pet_level">等级</string>
+    <string name="pet_exp">经验</string>
+    <string name="pet_interact">😊 互动</string>
+    <string name="pet_feed">🍖 喂食</string>
+    <string name="pet_play">🎮 玩耍</string>
+
+    <!-- Pet Moods -->
+    <string name="mood_happy">开心</string>
+    <string name="mood_sad">难过</string>
+    <string name="mood_sleepy">困倦</string>
+    <string name="mood_excited">兴奋</string>
+    <string name="mood_hungry">饥饿</string>
+    <string name="mood_bored">无聊</string>
+
+    <!-- Settings -->
+    <string name="settings_title">⚙️ 设置</string>
+    <string name="settings_pet_size">宠物大小</string>
+    <string name="settings_pet_opacity">宠物透明度</string>
+    <string name="settings_snooze_duration">贪睡时长(分钟)</string>
+    <string name="settings_max_snooze_count">最大贪睡次数</string>
+    <string name="settings_notification_duration">通知显示时间(秒)</string>
+    <string name="settings_vibration">振动提醒</string>
+    <string name="settings_sound">声音提醒</string>
+    <string name="settings_sleep_mode">睡眠模式</string>
+    <string name="settings_reset">🔄 恢复默认设置</string>
+
+    <!-- Common -->
+    <string name="back">← 返回</string>
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+    <string name="success">成功</string>
+    <string name="error">错误</string>
+    <string name="export_success">数据已导出到 clock3_backup.json</string>
+    <string name="import_success">导入成功!</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_alarm">闹钟提醒</string>
+    <string name="notification_channel_countdown">倒计时提醒</string>
+    <string name="notification_channel_service">悬浮球服务</string>
+    <string name="notification_alarm_title">⏰ 闹钟: %s</string>
+    <string name="notification_alarm_text">时间到了!</string>
+    <string name="notification_countdown_title">⏱️ 倒计时: %s</string>
+    <string name="notification_countdown_text">时间到!</string>
+    <string name="notification_service_title">Clock 3</string>
+    <string name="notification_service_text">悬浮球正在运行</string>
+
+    <!-- Permission -->
+    <string name="permission_notification">通知权限</string>
+    <string name="permission_overlay">悬浮窗权限</string>
+    <string name="permission_alarm">闹钟权限</string>
+    <string name="permission_battery">电池优化</string>
+</resources>
