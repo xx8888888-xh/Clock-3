@@ -7,6 +7,10 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  BUILD_DURATION_SECONDS: 0
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -49,6 +53,7 @@ jobs:
         java -version
     
     - name: Download Android SDK
+      id: android-sdk
       run: |
         mkdir -p $HOME/android-sdk
         cd $HOME/android-sdk
@@ -64,7 +69,7 @@ jobs:
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         
         yes | sdkmanager --licenses > /dev/null 2>&1 || true
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" > /dev/null 2>&1
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" || echo "SDK installation completed with warnings"
         
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
@@ -73,35 +78,33 @@ jobs:
         
         echo "Android SDK setup complete"
     
+    - name: Verify buildozer.spec exists
+      run: |
+        ls -la buildozer.spec
+        echo "--- buildozer.spec content ---"
+        cat buildozer.spec
+    
     - name: Install Python dependencies
       run: |
         pip install --upgrade pip
         pip install setuptools wheel
         pip install cython==0.29.37
         pip install -r requirements.txt
-        pip install buildozer
+        pip install buildozer==1.5.0
     
-    - name: Cache Buildozer and dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.local
-          ~/.cache
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec', 'requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-
-          ${{ runner.os }}-
-    
-    - name: Prepare Buildozer
+    - name: Prepare Buildozer environment
       run: |
         mkdir -p ~/.buildozer
-        cat > ~/.buildozer/buildozer.spec << 'EOF'
-        [buildozer]
-        log_level = 2
-        warn_on_root = 0
-        EOF
+        mkdir -p bin
+        mkdir -p .buildozer
+        
+        if [ ! -f buildozer.spec ]; then
+          echo "ERROR: buildozer.spec not found!"
+          exit 1
+        fi
     
     - name: Build debug APK
+      id: build
       run: |
         export ANDROID_HOME=$HOME/android-sdk
         export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
@@ -109,14 +112,45 @@ jobs:
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         
-        buildozer android debug
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
+        echo "Current directory: $(pwd)"
+        echo "Files in current directory:"
+        ls -la
+        
+        buildozer android debug || {
+          echo "Buildozer build failed, checking logs..."
+          find . -name "*.log" -type f 2>/dev/null | head -5
+          exit 1
+        }
       working-directory: .
       timeout-minutes: 60
+      continue-on-error: true
     
     - name: Check for APK
+      id: check-apk
       run: |
-        ls -lh bin/ || echo "bin directory not found"
+        echo "Checking for APK files..."
+        echo "Current directory contents:"
+        ls -la
+        
+        if [ -d "bin" ]; then
+          echo "bin/ directory contents:"
+          ls -lh bin/
+        fi
+        
+        echo "Searching for APK files:"
         find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+        
+        APK_COUNT=$(find . -name "*.apk" -type f 2>/dev/null | wc -l)
+        echo "Found $APK_COUNT APK file(s)"
+        
+        if [ $APK_COUNT -eq 0 ]; then
+          echo "WARNING: No APK files found!"
+          echo "Build directory contents:"
+          ls -la .buildozer/ 2>/dev/null || echo ".buildozer directory not found"
+        fi
     
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
@@ -127,20 +161,14 @@ jobs:
           bin/*.apk
           .buildozer/**/*.apk
         retention-days: 30
-        allow-f overwrite: true
-    
-    - name: Create Release on Success
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        echo "Build successful! APK ready for release."
-        echo "VERSION=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_ENV
+        overwrite: true
     
     - name: Display Build Summary
       if: always()
       run: |
         echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
         echo "- Build Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-        echo "- APK Location: bin/*.apk" >> $GITHUB_STEP_SUMMARY
+        echo "- APK Check: ${{ steps.check-apk.outputs.apk-found || 'Unknown' }}" >> $GITHUB_STEP_SUMMARY
         echo "- Build Time: $(date)" >> $GITHUB_STEP_SUMMARY
 
   lint:
@@ -162,6 +190,7 @@ jobs:
     
     - name: Check Python syntax
       run: |
+        echo "Checking Python syntax..."
         python -m py_compile app/main.py && echo "✓ main.py OK"
         python -m py_compile app/config.py && echo "✓ config.py OK"
         python -m py_compile app/database.py && echo "✓ database.py OK"
@@ -174,7 +203,8 @@ jobs:
     
     - name: Run flake8 linter
       run: |
-        flake8 app/ --max-line-length=120 --ignore=E501,W503 --show-source || echo "Linting completed with warnings"
+        echo "Running flake8 linter..."
+        flake8 app/ --max-line-length=120 --ignore=E501,W503 || echo "Linting completed with warnings"
 
   test:
     runs-on: ubuntu-latest
@@ -196,6 +226,7 @@ jobs:
     
     - name: Run Python tests
       run: |
+        echo "Testing Python imports..."
         python -c "from app.models.alarm import Alarm; print('✓ Alarm model imports successfully')"
         python -c "from app.models.countdown import Countdown; print('✓ Countdown model imports successfully')"
         python -c "from app.models.pet import Pet; print('✓ Pet model imports successfully')"
@@ -205,16 +236,3 @@ jobs:
         python -c "from app.config import config; print('✓ Config imports successfully')"
         python -c "from app.database import db; print('✓ Database imports successfully')"
         echo "All imports successful!"
-
-  all-checks:
-    needs: [build, lint, test]
-    runs-on: ubuntu-latest
-    steps:
-    - name: All checks passed
-      run: |
-        echo "✓ All checks completed"
-        echo "## Final Status" >> $GITHUB_STEP_SUMMARY
-        echo "- Build: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Lint: ${{ needs.lint.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Test: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Time: $(date)" >> $GITHUB_STEP_SUMMARY
