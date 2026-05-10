@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK with Docker
 
 on:
   push:
@@ -8,102 +8,51 @@ on:
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  BUILDOZER_VERSION: latest
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
     
-    - name: Install system dependencies
+    - name: Build APK using Kivy Buildozer Docker
       run: |
-        sudo apt-get update || true
-        sudo apt-get install -y --no-install-recommends \
-          python3-pip \
-          autoconf \
-          libtool \
-          pkg-config \
-          zlib1g-dev \
-          libncurses5-dev \
-          libncursesw5-dev \
-          libtinfo5 \
-          cmake \
-          libffi-dev \
-          libssl-dev \
-          git \
-          unzip \
-          wget \
-          openjdk-17-jdk || echo "System dependencies installed"
-    
-    - name: Setup Java
-      run: |
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        if [ ! -d "$JAVA_HOME" ]; then
-          JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-        fi
-        export PATH=$JAVA_HOME/bin:$PATH
-        java -version
-        echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-        echo "PATH=$JAVA_HOME/bin:$PATH" >> $GITHUB_ENV
-    
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-    
-    - name: Install SDK components
-      run: |
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-        yes | sdkmanager --licenses 2>/dev/null || true
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653" || echo "SDK installed"
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-    
-    - name: Install Python packages
-      run: |
-        pip install --upgrade pip setuptools wheel cython==0.29.37
-        pip install kivy==2.3.0 || pip install kivy || echo "Kivy installed"
-        pip install plyer || echo "Plyer installed"
-        pip install buildozer || echo "Buildozer installed"
-    
-    - name: Verify project
-      run: |
-        echo "=== Project Structure ==="
-        ls -la
-        echo "=== buildozer.spec ==="
-        cat buildozer.spec
-    
-    - name: Build APK
-      run: |
-        java -version
-        echo "ANDROID_HOME: $ANDROID_HOME"
-        buildozer android debug || {
-          echo "Build failed"
-          ls -la .buildozer/ 2>/dev/null || echo "No .buildozer"
-          exit 1
-        }
-        ls -la bin/ 2>/dev/null || echo "APK built"
-      timeout-minutes: 90
-    
-    - name: Upload artifact
+        echo "=== Pulling buildozer image ==="
+        docker pull kivy/buildozer:latest
+        
+        echo "=== Starting build ==="
+        docker run --rm \
+          -v $(pwd):/home/user/clock3 \
+          -w /home/user/clock3 \
+          kivy/buildozer \
+          /bin/sh -c "
+            mkdir -p ~/.buildozer
+            buildozer android debug 2>&1
+          "
+        
+        echo "=== Build completed ==="
+        ls -la bin/ 2>/dev/null || echo "No bin directory"
+        
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
+      if: always()
       with:
-        name: clock3-apk
+        name: clock3-debug-apk
         path: |
           bin/*.apk
-          .buildozer/**/*.apk
+          .buildozer/android/platform/build-armeabi-v7a/dists/*.apk
+          .buildozer/android/platform/build-arm64-v8a/dists/*.apk
         retention-days: 30
+        overwrite: true
 
   lint:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
@@ -115,12 +64,12 @@ jobs:
         done
 
   test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with: {python-version: '3.10'}
-    - run: pip install -r requirements.txt pytest
+    - run: pip install kivy plyer
     - run: |
         python -c "from app.models.alarm import Alarm; print('✓ Alarm')"
         python -c "from app.models.countdown import Countdown; print('✓ Countdown')"

@@ -46,6 +46,27 @@
 - **Buildozer** - Android打包
 - **GitHub Actions** - 自动化CI/CD
 
+## 构建 APK
+
+### 使用 Docker（推荐，自动在 GitHub Actions 上运行）
+
+当你推送到 `main` 或 `master` 分支时，GitHub Actions 会自动触发构建：
+
+1. 推送代码到仓库
+2. 打开 Actions 标签页查看构建进度
+3. 下载自动生成的 APK 附件
+
+### 本地构建
+
+```bash
+# 方法1: 使用官方 Docker 镜像（推荐）
+docker run --rm -v $(pwd):/home/user/clock3 -w /home/user/clock3 kivy/buildozer buildozer android debug
+
+# 方法2: 使用 Python 环境
+pip install buildozer kivy plyer
+buildozer android debug
+```
+
 ## 快速开始
 
 ### 桌面测试
