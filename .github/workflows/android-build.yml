@@ -18,7 +18,17 @@ jobs:
 
       - uses: android-actions/setup-android@v2
 
-      - run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+      - run: |
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          echo "=== Android SDK ==="
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          ls -la "$ANDROID_HOME"
+          echo "=== Project Structure ==="
+          ls -la android/
+          ls -la android/gradle/wrapper/
+          echo "=== Gradle Wrapper Properties ==="
+          cat android/gradle/wrapper/gradle-wrapper.properties
 
       - uses: gradle/actions/setup-gradle@v5
         with:
@@ -26,7 +36,18 @@ jobs:
 
       - name: Build
         working-directory: android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          gradle --version
+          gradle assembleDebug --no-daemon --stacktrace --info 2>&1 | tee build.log
+          echo "=== Build Log (last 100 lines) ==="
+          tail -100 build.log
+
+      - name: Upload Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: android/build.log
 
       - uses: actions/upload-artifact@v4
         if: success()
