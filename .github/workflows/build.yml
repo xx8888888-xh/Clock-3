@@ -87,8 +87,6 @@ jobs:
         sdkmanager --install \
           "platforms;android-33" \
           "build-tools;33.0.2" \
-          "build-tools;34.0.0" \
-          "build-tools;37.0.0" \
           "platform-tools"
 
         echo "=== Creating local.properties ==="
@@ -124,19 +122,31 @@ jobs:
         python3 --version
         pip3 list | grep -E "(buildozer|cython|kivy)"
 
-        echo "=== Check buildozer ==="
-        which buildozer || echo "buildozer not in PATH"
-        pip3 show buildozer || echo "buildozer not installed"
-
         echo "=== Clean previous builds ==="
         rm -rf .buildozer bin/*.apk buildozer.log 2>/dev/null || true
+
+        echo "=== Setting up buildozer's SDK location ==="
+        BUILDOZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
+        mkdir -p "$BUILDOZER_SDK"
+        mkdir -p "$BUILDOZER_SDK/licenses"
+        echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$BUILDOZER_SDK/licenses/android-sdk-license"
+        echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> "$BUILDOZER_SDK/licenses/android-sdk-license"
+        echo -e "\nd975f751698a77b662f1254ddbeed3901e976f5a" > "$BUILDOZER_SDK/licenses/intel-android-extra-license"
+        
+        if [ ! -d "$BUILDOZER_SDK/build-tools" ]; then
+          echo "Copying SDK components to buildozer location..."
+          cp -r "$ANDROID_HOME/build-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
+          cp -r "$ANDROID_HOME/platforms" "$BUILDOZER_SDK/" 2>/dev/null || true
+          cp -r "$ANDROID_HOME/platform-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
+        fi
+        
+        ls -la "$BUILDOZER_SDK/"
 
         echo "=== Build APK (logging to buildozer.log) ==="
         echo "Build started at $(date)" > buildozer.log
         echo "Python: $(which python3)" >> buildozer.log
-        echo "Buildozer: $(which buildozer || echo 'not found')" >> buildozer.log
+        echo "BUILDOZER_SDK: $BUILDOZER_SDK" >> buildozer.log
         echo "ANDROID_HOME: $ANDROID_HOME" >> buildozer.log
-        echo "PATH: $PATH" >> buildozer.log
 
         python3 -m buildozer android debug >> buildozer.log 2>&1
         BUILD_EXIT=$?
@@ -157,8 +167,6 @@ jobs:
           ls -lh bin/*.apk
         else
           echo "APK not found"
-          echo "=== .buildozer contents ==="
-          find .buildozer -type f 2>/dev/null | head -20 || echo "No .buildozer directory"
         fi
 
         if [ $BUILD_EXIT -ne 0 ]; then
