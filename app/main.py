@@ -43,8 +43,8 @@ class PetWidget(Widget):
     
     size_hint = NumericProperty(0.15)
     is_dragging = BooleanProperty(False)
-    last_touch_time = 0
-    touch_count = 0
+    touch_count = NumericProperty(0)
+    last_touch_time = NumericProperty(0)
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -58,14 +58,14 @@ class PetWidget(Widget):
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
             self.is_dragging = True
-            touch_count = self.check_touch_count()
+            current_touch_count = self.check_touch_count()
             
-            if touch_count == 1:
+            if current_touch_count == 1:
                 Clock.schedule_once(lambda dt: self.single_tap(), 0.3)
-            elif touch_count == 2:
+            elif current_touch_count == 2:
                 Clock.unschedule(self.single_tap)
                 self.double_tap()
-            elif touch_count == 3:
+            elif current_touch_count == 3:
                 Clock.unschedule(self.single_tap)
                 self.triple_tap()
             
@@ -115,13 +115,17 @@ class PetWidget(Widget):
         app.show_countdown()
     
     def start_animations(self):
+        if hasattr(self, 'float_animation_event') and self.float_animation_event:
+            Clock.unschedule(self.float_animation_event)
+        
         def float_animation(dt):
             if not self.is_dragging and not pet_service.is_sleeping():
                 anim = Animation(y=self.pos_hint['y'] + 0.02, duration=1)
                 anim += Animation(y=self.pos_hint['y'], duration=1)
                 anim.start(self)
         
-        Clock.schedule_interval(float_animation, 2)
+        self.float_animation_event = float_animation
+        Clock.schedule_interval(self.float_animation_event, 2)
     
     def update_mood(self):
         status = pet_service.get_status()
@@ -139,6 +143,7 @@ class FloatingPetApp(App):
         Window.clearcolor = (0.95, 0.95, 0.95, 1)
         
         self.root_widget = FloatLayout()
+        self.current_alarm_sound = None
         
         self.pet = PetWidget()
         self.root_widget.add_widget(self.pet)
@@ -199,13 +204,29 @@ class FloatingPetApp(App):
     
     def play_alarm_sound(self):
         try:
+            self.stop_alarm_sound()
             from kivy.core.audio import SoundLoader
-            sound = SoundLoader.load('assets/alarm.mp3')
-            if sound:
-                sound.loop = True
-                sound.play()
+            import os
+            sound_path = 'assets/alarm.mp3'
+            if not os.path.exists(sound_path):
+                print(f"声音文件不存在: {sound_path}")
+                return
+            self.current_alarm_sound = SoundLoader.load(sound_path)
+            if self.current_alarm_sound:
+                self.current_alarm_sound.loop = True
+                self.current_alarm_sound.play()
         except Exception as e:
             print(f"播放声音失败: {e}")
+    
+    def stop_alarm_sound(self):
+        """停止闹钟声音"""
+        if self.current_alarm_sound:
+            try:
+                self.current_alarm_sound.stop()
+                self.current_alarm_sound.unload()
+            except Exception as e:
+                print(f"停止声音失败: {e}")
+            self.current_alarm_sound = None
     
     def show_main_menu(self):
         content = BoxLayout(orientation='vertical', padding=20, spacing=10)
@@ -449,14 +470,13 @@ class FloatingPetApp(App):
         close_btn.bind(on_press=lambda b: self.dismiss_popup())
         content.add_widget(close_btn)
         
-        popup = Popup(
+        self.countdown_complete_popup = Popup(
             title='倒计时结束',
             content=content,
             size_hint=(0.8, 0.4),
             auto_dismiss=False
         )
-        popup.open()
-        self.active_popup = popup
+        self.countdown_complete_popup.open()
     
     def show_alarm_popup(self, alarm):
         content = BoxLayout(orientation='vertical', padding=20)
@@ -469,10 +489,12 @@ class FloatingPetApp(App):
         dismiss_btn = Button(text='✓ 关闭', background_color=(0.2, 0.7, 0.3, 1))
         
         def snooze(b):
+            self.stop_alarm_sound()
             alarm_service.snooze_alarm(config.get('snooze_duration', 5))
             self.dismiss_popup()
         
         def dismiss(b):
+            self.stop_alarm_sound()
             alarm_service.dismiss_alarm()
             self.dismiss_popup()
         
@@ -687,25 +709,18 @@ class FloatingPetApp(App):
         popup.open()
     
     def dismiss_popup(self):
-        try:
-            if hasattr(self, 'main_menu_popup') and self.main_menu_popup.__class__.__name__ == 'Popup':
-                self.main_menu_popup.dismiss()
-            if hasattr(self, 'alarms_popup') and self.alarms_popup.__class__.__name__ == 'Popup':
-                self.alarms_popup.dismiss()
-            if hasattr(self, 'add_alarm_popup') and self.add_alarm_popup.__class__.__name__ == 'Popup':
-                self.add_alarm_popup.dismiss()
-            if hasattr(self, 'countdown_popup') and self.countdown_popup.__class__.__name__ == 'Popup':
-                self.countdown_popup.dismiss()
-            if hasattr(self, 'pet_popup') and self.pet_popup.__class__.__name__ == 'Popup':
-                self.pet_popup.dismiss()
-            if hasattr(self, 'settings_popup') and self.settings_popup.__class__.__name__ == 'Popup':
-                self.settings_popup.dismiss()
-            if hasattr(self, 'alarm_popup') and self.alarm_popup.__class__.__name__ == 'Popup':
-                self.alarm_popup.dismiss()
-            if hasattr(self, 'active_popup') and self.active_popup.__class__.__name__ == 'Popup':
-                self.active_popup.dismiss()
-        except Exception:
-            pass
+        popup_list = [
+            'main_menu_popup', 'alarms_popup', 'add_alarm_popup',
+            'countdown_popup', 'pet_popup', 'settings_popup',
+            'alarm_popup', 'active_popup', 'countdown_complete_popup'
+        ]
+        for attr_name in popup_list:
+            try:
+                popup = getattr(self, attr_name, None)
+                if popup and hasattr(popup, 'dismiss'):
+                    popup.dismiss()
+            except Exception:
+                pass
     
     def update_status(self):
         pet_status = pet_service.get_status()

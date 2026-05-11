@@ -6,8 +6,16 @@ class Config:
     """应用配置管理"""
     
     def __init__(self):
-        self.config_dir = Path.home() / '.clock3'
-        self.config_dir.mkdir(exist_ok=True)
+        import platform
+        system = platform.system()
+        
+        if system == 'Android':
+            from android.storage import app_storage_path
+            self.config_dir = Path(app_storage_path()) / '.clock3'
+        else:
+            self.config_dir = Path.home() / '.clock3'
+        
+        self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config_file = self.config_dir / 'config.json'
         self.default_config = {
             'pet_size': 100,
@@ -32,12 +40,18 @@ class Config:
     
     def load(self):
         """加载配置"""
+        import logging
+        logger = logging.getLogger(__name__)
         if self.config_file.exists():
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     loaded = json.load(f)
                     self.settings = {**self.default_config, **loaded}
-            except Exception:
+            except json.JSONDecodeError as e:
+                logger.warning(f"配置文件格式错误，使用默认配置: {e}")
+                self.settings = self.default_config.copy()
+            except Exception as e:
+                logger.error(f"加载配置失败: {e}")
                 self.settings = self.default_config.copy()
         else:
             self.settings = self.default_config.copy()

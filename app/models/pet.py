@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 from typing import Optional
 
@@ -52,7 +53,6 @@ class Pet:
         self.last_interaction = datetime.now().isoformat()
         self.total_interactions += 1
         
-        import random
         self.mood = random.choice(self.MOODS)
         
         exp_gain = 5 + (self.level * 2)
@@ -60,7 +60,6 @@ class Pet:
     
     def get_random_message(self) -> str:
         """获取随机消息"""
-        import random
         messages = self.MOOD_MESSAGES.get(self.mood, ['你好!'])
         return random.choice(messages)
     
@@ -79,7 +78,7 @@ class Pet:
     def is_sleeping(self) -> bool:
         """检查是否在睡眠时间"""
         current_hour = datetime.now().hour
-        return 22 <= current_hour or current_hour < 7
+        return 22 <= current_hour and current_hour < 7
     
     def to_dict(self) -> dict:
         """转换为字典"""

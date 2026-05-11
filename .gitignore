@@ -119,3 +119,11 @@ bin/
 # Project specific
 clock3_backup.json
 test_*.py
+
+# Kivy
+.kivy/
+*.pyc
+
+# Clock3 specific data
+.clock3/
+config.json
