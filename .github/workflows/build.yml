@@ -133,16 +133,21 @@ jobs:
         cp -r "$ANDROID_HOME/build-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
         cp -r "$ANDROID_HOME/platforms" "$BUILDOZER_SDK/" 2>/dev/null || true
         cp -r "$ANDROID_HOME/platform-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
-        cp -r "$ANDROID_HOME/cmdline-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
         
         mkdir -p "$BUILDOZER_SDK/licenses"
         echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$BUILDOZER_SDK/licenses/android-sdk-license"
         echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> "$BUILDOZER_SDK/licenses/android-sdk-license"
         echo -e "\nd975f751698a77b662f1254ddbeed3901e976f5a" > "$BUILDOZER_SDK/licenses/intel-android-extra-license"
         
+        echo "Creating tools/bin symlink for buildozer compatibility..."
+        mkdir -p "$BUILDOZER_SDK/tools/bin"
+        ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$BUILDOZER_SDK/tools/bin/sdkmanager" 2>/dev/null || true
+        ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/"* "$BUILDOZER_SDK/tools/bin/" 2>/dev/null || true
+        
         echo "=== Buildozer SDK contents ==="
         ls -la "$BUILDOZER_SDK/"
-        ls -la "$BUILDOZER_SDK/cmdline-tools/" 2>/dev/null || echo "No cmdline-tools"
+        ls -la "$BUILDOZER_SDK/tools/" 2>/dev/null || echo "No tools"
+        ls -la "$BUILDOZER_SDK/tools/bin/" 2>/dev/null || echo "No tools/bin"
 
         echo "=== Build APK (logging to buildozer.log) ==="
         echo "Build started at $(date)" > buildozer.log
