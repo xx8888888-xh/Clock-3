@@ -101,12 +101,29 @@ jobs:
 
     - name: Build APK
       id: build
+      timeout-minutes: 40
       run: |
         export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
         export ANDROIDSDK="$ANDROID_HOME"
         
+        echo "=== Current Directory ==="
+        pwd
+        ls -la
+        
         echo "=== Environment ==="
         env | grep -E "(ANDROID|PYTHON)" || true
+        
+        echo "=== Check Python ==="
+        which python3
+        python3 --version
+        pip3 list | grep -E "(buildozer|cython|kivy)"
+        
+        echo "=== Check Android SDK ==="
+        ls -la $ANDROID_HOME/ 2>/dev/null || echo "SDK not found"
+        which sdkmanager 2>/dev/null || echo "sdkmanager not found"
+        
+        echo "=== Check source files ==="
+        ls -la *.py app/*.py 2>/dev/null || true
         
         echo "=== Building APK with buildozer ==="
         
@@ -127,8 +144,8 @@ jobs:
           ls -lh bin/*.apk 2>/dev/null || true
         else
           echo "APK not found in expected locations"
-          echo "=== Last 100 lines of buildozer.log ==="
-          tail -100 buildozer.log || true
+          echo "=== Last 200 lines of buildozer.log ==="
+          tail -200 buildozer.log || true
         fi
         
         echo "=== Saving build log ==="
