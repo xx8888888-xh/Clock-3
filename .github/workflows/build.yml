@@ -55,8 +55,7 @@ jobs:
           unzip \
           openjdk-17-jdk \
           zipalign \
-          wget \
-          unzip
+          wget
 
     - name: Install Python dependencies
       run: |
@@ -69,10 +68,8 @@ jobs:
         export ANDROID_HOME="$HOME/android-sdk"
         mkdir -p "$ANDROID_HOME"
         
-        echo "=== Downloading Android SDK ==="
-        cd "$ANDROID_HOME"
-        
         if [ ! -f "cmdline-tools/latest/bin/sdkmanager" ]; then
+          echo "=== Downloading Android SDK ==="
           wget -q "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" -O cmdline-tools.zip
           unzip -q cmdline-tools.zip
           mkdir -p cmdline-tools/latest
@@ -99,7 +96,6 @@ jobs:
         echo "ndk.dir=$ANDROID_HOME/ndk/25.1.8937393" >> local.properties
         
         echo "=== SDK Setup Complete ==="
-        ls -la "$ANDROID_HOME"
 
     - name: Show buildozer.spec
       run: |
@@ -114,7 +110,6 @@ jobs:
         ANDROIDSDK: ${{ runner.home }}/android-sdk
         ANDROIDNDK: ${{ runner.home }}/android-sdk/ndk/25.1.8937393
       run: |
-        set -e
         export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
         export ANDROIDSDK="$ANDROID_HOME"
         export ANDROIDNDK="$ANDROID_HOME/ndk/25.1.8937393"
@@ -134,28 +129,38 @@ jobs:
         pip3 list | grep -E "(buildozer|cython|kivy)"
         
         echo "=== Clean previous builds ==="
-        rm -rf .buildozer bin/*.apk 2>/dev/null || true
+        rm -rf .buildozer bin/*.apk buildozer.log 2>/dev/null || true
         
-        echo "=== Building APK ==="
-        buildozer android debug 2>&1 | tee buildozer.log
-        BUILD_EXIT=${PIPESTATUS[0]}
+        echo "=== Build APK (logging to buildozer.log) ==="
+        echo "Build started at $(date)" > buildozer.log
         
-        if [ $BUILD_EXIT -ne 0 ]; then
-          echo "Build command exited with code $BUILD_EXIT"
-          echo "=== Last 100 lines of log ==="
-          tail -100 buildozer.log || true
-          exit 1
+        buildozer android debug >> buildozer.log 2>&1
+        BUILD_EXIT=$?
+        
+        echo "Build finished at $(date) with exit code $BUILD_EXIT" >> buildozer.log
+        
+        echo "=== Build output (last 100 lines) ==="
+        tail -100 buildozer.log || echo "No log file"
+        
+        echo "=== Checking for APK ==="
+        if ls bin/*.apk 2>/dev/null; then
+          echo "SUCCESS: APK found in bin/"
+          ls -lh bin/*.apk
+        elif find .buildozer -name "*.apk" 2>/dev/null | head -1 | xargs -I {} ls -lh {} 2>/dev/null; then
+          echo "SUCCESS: APK found in .buildozer"
+          mkdir -p bin
+          find .buildozer -name "*.apk" -exec cp {} bin/ \; 2>/dev/null || true
+          ls -lh bin/*.apk
+        else
+          echo "APK not found"
+          echo "=== .buildozer contents ==="
+          find .buildozer -type f 2>/dev/null | head -20 || echo "No .buildozer directory"
         fi
         
-        echo "=== Build completed ==="
-        ls -la bin/ 2>/dev/null || true
-        find .buildozer -name '*.apk' 2>/dev/null || true
-
-    - name: Prepare APK for upload
-      run: |
-        mkdir -p bin
-        find .buildozer -name '*.apk' -exec cp {} bin/ \; 2>/dev/null || true
-        ls -la bin/
+        if [ $BUILD_EXIT -ne 0 ]; then
+          echo "Build command failed with exit code $BUILD_EXIT"
+          exit 1
+        fi
 
     - name: Upload APK
       if: success()
