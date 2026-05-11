@@ -52,6 +52,8 @@ jobs:
           libsqlite3-dev \
           libffi-dev \
           libtool \
+          autoconf \
+          automake \
           unzip \
           openjdk-17-jdk \
           zipalign \
@@ -61,7 +63,7 @@ jobs:
       run: |
         pip3 install --upgrade pip setuptools wheel
         pip3 install cython==0.29.36
-        pip3 install buildozer==1.5.0
+        pip3 install buildozer==1.6.0
 
     - name: Set up Android SDK
       run: |
