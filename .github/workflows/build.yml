@@ -59,15 +59,15 @@ jobs:
 
     - name: Install Python dependencies
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install cython==0.29.36
-        pip install buildozer==1.5.0
+        pip3 install --upgrade pip setuptools wheel
+        pip3 install cython==0.29.36
+        pip3 install buildozer==1.5.0
 
     - name: Set up Android SDK
       run: |
         export ANDROID_HOME="$HOME/android-sdk"
         mkdir -p "$ANDROID_HOME"
-        
+
         if [ ! -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
           echo "=== Downloading Android SDK ==="
           cd "$ANDROID_HOME"
@@ -77,22 +77,22 @@ jobs:
           mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
           rm -f cmdline-tools.zip
         fi
-        
+
         export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
-        
+
         echo "=== Accepting licenses ==="
         yes | sdkmanager --licenses 2>/dev/null || true
-        
+
         echo "=== Installing SDK components ==="
         sdkmanager --install \
           "platforms;android-33" \
           "build-tools;33.0.2" \
           "platform-tools"
-        
+
         echo "=== Creating local.properties ==="
         cd /home/runner/work/Clock-3/Clock-3
         echo "sdk.dir=$ANDROID_HOME" > local.properties
-        
+
         echo "=== SDK Setup Complete ==="
         ls -la "$ANDROID_HOME"
 
@@ -110,34 +110,43 @@ jobs:
       run: |
         export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
         export ANDROIDSDK="$ANDROID_HOME"
-        
+        export PATH="$PATH:$HOME/.local/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
+
         echo "=== Environment ==="
         echo "ANDROID_HOME=$ANDROID_HOME"
         echo "ANDROIDSDK=$ANDROIDSDK"
+        echo "PATH=$PATH"
         ls -la "$ANDROID_HOME"
-        
+
         echo "=== Current Directory ==="
         pwd
         ls -la
-        
+
         echo "=== Python Version ==="
         python3 --version
         pip3 list | grep -E "(buildozer|cython|kivy)"
-        
+
+        echo "=== Check buildozer ==="
+        which buildozer || echo "buildozer not in PATH"
+        pip3 show buildozer || echo "buildozer not installed"
+
         echo "=== Clean previous builds ==="
         rm -rf .buildozer bin/*.apk buildozer.log 2>/dev/null || true
-        
+
         echo "=== Build APK (logging to buildozer.log) ==="
         echo "Build started at $(date)" > buildozer.log
-        
-        buildozer android debug >> buildozer.log 2>&1
+        echo "Python: $(which python3)" >> buildozer.log
+        echo "Buildozer: $(which buildozer || echo 'not found')" >> buildozer.log
+        echo "PATH: $PATH" >> buildozer.log
+
+        python3 -m buildozer android debug >> buildozer.log 2>&1
         BUILD_EXIT=$?
-        
+
         echo "Build finished at $(date) with exit code $BUILD_EXIT" >> buildozer.log
-        
-        echo "=== Build output (last 100 lines) ==="
-        tail -100 buildozer.log || echo "No log file"
-        
+
+        echo "=== Build output (last 150 lines) ==="
+        tail -150 buildozer.log || echo "No log file"
+
         echo "=== Checking for APK ==="
         if ls bin/*.apk 2>/dev/null; then
           echo "SUCCESS: APK found in bin/"
@@ -152,7 +161,7 @@ jobs:
           echo "=== .buildozer contents ==="
           find .buildozer -type f 2>/dev/null | head -20 || echo "No .buildozer directory"
         fi
-        
+
         if [ $BUILD_EXIT -ne 0 ]; then
           echo "Build command failed with exit code $BUILD_EXIT"
           exit 1
