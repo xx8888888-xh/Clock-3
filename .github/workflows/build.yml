@@ -22,9 +22,11 @@ jobs:
     
     - name: Build APK with Docker
       run: |
-        set -e
+        echo "=== Step 1: Pull Docker image ==="
+        docker pull kivy/buildozer:latest || echo "Pull failed, trying to use cached..."
         
-        echo "=== Building APK with kivy/buildozer Docker ==="
+        echo "=== Step 2: Run Docker build ==="
+        set +e  # Don't exit on error, we want to see logs
         
         docker run --rm \
           -v $(pwd):/home/user/clock3 \
@@ -36,24 +38,33 @@ jobs:
             pwd
             ls -la
             echo 'sdk.dir=/opt/android-sdk' > local.properties
-            echo '=== Starting build ==='
-            buildozer android debug
-            echo '=== Build completed ==='
-            find . -name '*.apk' -type f
+            echo '=== Checking buildozer.spec ==='
+            cat buildozer.spec | head -20
+            echo '=== Starting buildozer build ==='
+            buildozer android debug 2>&1 | tee buildozer.log
+            echo '=== Build finished ==='
           "
         
+        DOCKER_EXIT=$?
+        echo "Docker command exit code: $DOCKER_EXIT"
+        
         echo "=== Checking for APK ==="
-        APK_FILES=$(find . -name "*.apk" -type f 2>/dev/null)
-        if [ -n "$APK_FILES" ]; then
-          echo "Found APK files:"
-          echo "$APK_FILES"
-          ls -lh $APK_FILES
+        if [ -f "bin/clock3-*-debug.apk" ]; then
+          echo "SUCCESS: APK found!"
+          ls -lh bin/
+        elif [ -f "bin/*.apk" ]; then
+          echo "SUCCESS: APK found in bin/"
+          ls -lh bin/*.apk
         else
-          echo "No APK found in current directory"
-          find . -name "*.apk" 2>/dev/null || echo "Searching in .buildozer..."
-          find .buildozer -name "*.apk" 2>/dev/null || true
-          echo "Build may have failed silently"
-          exit 1
+          echo "APK not found in expected location"
+          find . -name "*.apk" 2>/dev/null || echo "No APK files found"
+          echo "=== buildozer.log (if exists) ==="
+          cat buildozer.log 2>/dev/null || echo "No log file"
+        fi
+        
+        if [ $DOCKER_EXIT -ne 0 ]; then
+          echo "Docker command failed with exit code $DOCKER_EXIT"
+          exit $DOCKER_EXIT
         fi
     
     - name: Upload APK
@@ -64,5 +75,4 @@ jobs:
         path: |
           bin/*.apk
           .buildozer/**/bin/*.apk
-          ./**/*.apk
         retention-days: 30
