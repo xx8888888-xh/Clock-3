@@ -128,19 +128,21 @@ jobs:
         echo "=== Setting up buildozer's SDK location ==="
         BUILDOZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
         mkdir -p "$BUILDOZER_SDK"
+        
+        echo "Copying SDK components to buildozer location..."
+        cp -r "$ANDROID_HOME/build-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
+        cp -r "$ANDROID_HOME/platforms" "$BUILDOZER_SDK/" 2>/dev/null || true
+        cp -r "$ANDROID_HOME/platform-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
+        cp -r "$ANDROID_HOME/cmdline-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
+        
         mkdir -p "$BUILDOZER_SDK/licenses"
         echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$BUILDOZER_SDK/licenses/android-sdk-license"
         echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> "$BUILDOZER_SDK/licenses/android-sdk-license"
         echo -e "\nd975f751698a77b662f1254ddbeed3901e976f5a" > "$BUILDOZER_SDK/licenses/intel-android-extra-license"
         
-        if [ ! -d "$BUILDOZER_SDK/build-tools" ]; then
-          echo "Copying SDK components to buildozer location..."
-          cp -r "$ANDROID_HOME/build-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
-          cp -r "$ANDROID_HOME/platforms" "$BUILDOZER_SDK/" 2>/dev/null || true
-          cp -r "$ANDROID_HOME/platform-tools" "$BUILDOZER_SDK/" 2>/dev/null || true
-        fi
-        
+        echo "=== Buildozer SDK contents ==="
         ls -la "$BUILDOZER_SDK/"
+        ls -la "$BUILDOZER_SDK/cmdline-tools/" 2>/dev/null || echo "No cmdline-tools"
 
         echo "=== Build APK (logging to buildozer.log) ==="
         echo "Build started at $(date)" > buildozer.log
