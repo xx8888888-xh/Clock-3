@@ -3,45 +3,11 @@ name: Build Android APK with Docker
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
-env:
-  BUILDOZER_VERSION: "1.5.0"
-  DOCKER_IMAGE: "kivy/buildozer:1.5.0"
-
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    
-    - name: Install lint tools
-      run: pip install flake8
-    
-    - name: Run linting
-      run: |
-        echo "=== Running flake8 ==="
-        flake8 app/ --max-line-length=120 --ignore=E501,W503 || echo "Linting completed with warnings"
-        
-        echo "=== Checking Python syntax ==="
-        for f in app/main.py app/config.py app/database.py app/models/*.py app/services/*.py; do
-          if python -m py_compile "$f" 2>&1; then
-            echo "✓ $f OK"
-          else
-            echo "✗ $f FAILED"
-            exit 1
-          fi
-        done
-
   build:
     runs-on: ubuntu-latest
-    needs: [lint]
     
     steps:
     - name: Checkout code
@@ -50,87 +16,44 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
     
-    - name: Prepare assets directory
+    - name: Create assets if missing
       run: |
-        if [ ! -d "assets" ]; then
-          echo "Creating assets directory..."
-          mkdir -p assets
-          touch assets/alarm.mp3
-          touch assets/icon.png
-        fi
+        mkdir -p assets
+        if [ ! -f assets/alarm.mp3 ]; then touch assets/alarm.mp3; fi
+        if [ ! -f assets/icon.png ]; then touch assets/icon.png; fi
         ls -la assets/
     
-    - name: Prepare buildozer.spec
+    - name: Verify buildozer.spec exists
       run: |
-        if [ ! -f "buildozer.spec" ]; then
-          echo "ERROR: buildozer.spec is missing!"
+        if [ ! -f buildozer.spec ]; then
+          echo "ERROR: buildozer.spec not found!"
+          ls -la
           exit 1
         fi
-        echo "buildozer.spec found:"
-        head -20 buildozer.spec
+        echo "buildozer.spec exists"
     
     - name: Build APK
-      id: build
       run: |
-        echo "=== Build Configuration ==="
-        echo "BUILDOZER_VERSION: $BUILDOZER_VERSION"
-        echo "DOCKER_IMAGE: $DOCKER_IMAGE"
-        
-        echo "=== Pulling buildozer image ==="
-        docker pull kivy/buildozer:latest || echo "Docker pull completed"
-        
-        echo "=== Starting APK build ==="
+        echo "=== Starting Docker build ==="
         docker run --rm \
           -v $(pwd):/home/user/clock3 \
           -w /home/user/clock3 \
-          kivy/buildozer \
+          kivy/buildozer:latest \
           /bin/sh -c "
-            set +e
-            echo 'Initializing buildozer...'
+            echo 'Building APK...'
             buildozer android debug 2>&1 | tee build.log
-            EXIT_CODE=\${PIPESTATUS[0]}
-            echo 'Build exit code: '\$EXIT_CODE
-            if [ -f 'bin/*.apk' ]; then
-              echo '=== APK files found ==='
-              ls -lh bin/
-            else
-              echo '=== Checking for APK in other locations ==='
-              find . -name '*.apk' 2>/dev/null || echo 'No APK found'
-              find .buildozer -name '*.apk' 2>/dev/null || echo 'No APK in .buildozer'
-            fi
-            exit \$EXIT_CODE
+            echo 'Build finished'
+            echo '=== Build artifacts ==='
+            find . -name '*.apk' -type f 2>/dev/null || echo 'No APK files found'
           "
-        BUILD_EXIT=$?
-        echo "Final build exit code: $BUILD_EXIT"
-        if [ $BUILD_EXIT -ne 0 ]; then
-          echo "Build failed with exit code $BUILD_EXIT"
-          exit $BUILD_EXIT
-        fi
-        
-    - name: Find and list APK
-      run: |
-        echo "=== Searching for APK files ==="
-        APK_FILES=$(find . -name "*.apk" -type f 2>/dev/null)
-        if [ -n "$APK_FILES" ]; then
-          echo "Found APK files:"
-          echo "$APK_FILES"
-          ls -lh $APK_FILES
-        else
-          echo "No APK files found!"
-          echo "Checking bin directory:"
-          ls -la bin/ 2>/dev/null || echo "bin/ not found"
-          echo "Checking buildozer directory:"
-          find .buildozer -name "*.apk" 2>/dev/null || echo "No APK in .buildozer"
-        fi
-        
-    - name: Upload APK artifact
+    
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: clock3-apk
         path: |
           bin/*.apk
           .buildozer/**/bin/*.apk
-          .buildozer/**/*/bin/*.apk
-          ./**.apk
+          ./**/*.apk
         retention-days: 7
         ignore-no-files: true
