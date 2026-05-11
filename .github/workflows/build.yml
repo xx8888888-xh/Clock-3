@@ -63,12 +63,14 @@ jobs:
         pip install cython==0.29.36
         pip install buildozer==1.5.0
 
-    - name: Set up Android SDK with caching
+    - name: Set up Android SDK
       uses: android-actions/setup-android@v3
       with:
-        api-level: 33
-        build-tools: 33.0.2
-        components: platform-tools
+        accept-android-sdk-licenses: true
+        packages: |
+          platforms;android-33
+          build-tools;33.0.2
+          platform-tools
 
     - name: Configure Android SDK
       run: |
