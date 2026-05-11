@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    timeout-minutes: 45
 
     steps:
     - name: Checkout
@@ -16,8 +18,12 @@ jobs:
     - name: Prepare assets
       run: |
         mkdir -p assets
-        touch assets/alarm.mp3
-        touch assets/icon.png
+        if [ ! -f assets/alarm.mp3 ]; then
+          touch assets/alarm.mp3
+        fi
+        if [ ! -f assets/icon.png ]; then
+          touch assets/icon.png
+        fi
         ls -la assets/
 
     - name: Set up Python
@@ -48,50 +54,37 @@ jobs:
           libffi-dev \
           libtool \
           unzip \
-          openjdk-17-jdk
+          openjdk-17-jdk \
+          zipalign
 
     - name: Install Python dependencies
       run: |
-        pip install --upgrade pip
-        pip install buildozer==1.5.0
+        pip install --upgrade pip setuptools wheel
         pip install cython==0.29.36
+        pip install buildozer==1.5.0
 
-    - name: Install Android SDK
-      run: |
-        mkdir -p $HOME/.local/android-sdk
-        cd $HOME/.local/android-sdk
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-        unzip -q cmdline-tools.zip
-        mkdir -p cmdline-tools/latest
-        mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
-        rm cmdline-tools.zip
-        
-        export ANDROID_HOME=$HOME/.local/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-        
-        yes | sdkmanager --licenses 2>/dev/null || true
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+    - name: Set up Android SDK with caching
+      uses: android-actions/setup-android@v3
+      with:
+        api-level: 33
+        build-tools: 33.0.2
+        components: platform-tools
 
     - name: Configure Android SDK
       run: |
-        echo "sdk.dir=$HOME/.local/android-sdk" > local.properties
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
         cat local.properties
-
-        mkdir -p $HOME/.local/android-sdk/licenses
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.local/android-sdk/licenses/android-sdk-license
-        echo "84831b9409646a918e30573bab4c9c91346d8abd" >> $HOME/.local/android-sdk/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $HOME/.local/android-sdk/licenses/android-sdk-license
-
-    - name: Configure environment
-      run: |
-        export ANDROID_HOME=$HOME/.local/android-sdk
-        export ANDROIDSDK=$ANDROID_HOME
-        export ANDROIDNDK=$ANDROID_HOME/ndk/25b
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "ANDROIDSDK=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "PATH=$PATH" >> $GITHUB_ENV
+        mkdir -p $ANDROID_HOME/licenses
+        echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+        echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> $ANDROID_HOME/licenses/android-sdk-license
+
+    - name: Show environment
+      run: |
+        echo "ANDROID_HOME=$ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+        ls -la $ANDROID_HOME/ 2>/dev/null || echo "SDK not found"
+        which sdkmanager || echo "sdkmanager not found"
 
     - name: Show buildozer.spec
       run: |
@@ -99,38 +92,52 @@ jobs:
         cat buildozer.spec
 
     - name: Build APK
+      id: build
+      continue-on-error: true
       run: |
-        export ANDROID_HOME=$HOME/.local/android-sdk
-        export ANDROIDSDK=$ANDROID_HOME
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+        export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
+        export ANDROIDSDK="$ANDROID_HOME"
         
         echo "=== Environment ==="
-        env | grep -i android || true
+        env | grep -E "(ANDROID|PYTHON)" || true
         
-        echo "=== Building APK ==="
-        buildozer android debug --verbose 2>&1 | tee buildozer.log
+        echo "=== Building APK with buildozer ==="
+        
+        buildozer android debug 2>&1 | tee buildozer.log
+        
+        BUILD_EXIT=$?
+        echo "Buildozer exit code: $BUILD_EXIT"
         
         echo "=== Checking for APK ==="
-        if [ -f "bin/*.apk" ]; then
-          echo "SUCCESS: APK found!"
+        if ls bin/*.apk 2>/dev/null; then
+          echo "SUCCESS: APK found in bin/"
           ls -lh bin/*.apk
-        elif [ -f ".buildozer/android/platform/build-*/bin/*.apk" ]; then
-          echo "SUCCESS: APK found in .buildozer!"
-          find .buildozer -name "*.apk" -exec ls -lh {} \;
-          cp $(find .buildozer -name "*.apk" | head -1) bin/ 2>/dev/null || true
+          echo "APK_BUILT=true" >> $GITHUB_ENV
+        elif find .buildozer -name "*.apk" 2>/dev/null | head -1 | xargs -I {} ls -lh {} 2>/dev/null; then
+          echo "SUCCESS: APK found in .buildozer"
+          find .buildozer -name "*.apk" -exec cp {} bin/ \;
+          ls -lh bin/*.apk
+          echo "APK_BUILT=true" >> $GITHUB_ENV
         else
-          echo "APK not found"
-          find . -name "*.apk" 2>/dev/null || echo "No APK files found"
-          echo "=== Last 100 lines of buildozer.log ==="
-          tail -100 buildozer.log || true
+          echo "APK not found in expected locations"
+          echo "=== Last 200 lines of buildozer.log ==="
+          tail -200 buildozer.log || true
+          echo "APK_BUILT=false" >> $GITHUB_ENV
         fi
+        
+        exit $BUILD_EXIT
+
+    - name: Show build log on failure
+      if: failure()
+      run: |
+        echo "=== Full buildozer.log ==="
+        cat buildozer.log 2>/dev/null || echo "No log file found"
 
     - name: Upload APK
-      if: success()
+      if: success() && env.APK_BUILT == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: clock3-apk
         path: |
           bin/*.apk
-          .buildozer/**/bin/*.apk
         retention-days: 30
