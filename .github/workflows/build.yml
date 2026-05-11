@@ -68,8 +68,9 @@ jobs:
         export ANDROID_HOME="$HOME/android-sdk"
         mkdir -p "$ANDROID_HOME"
         
-        if [ ! -f "cmdline-tools/latest/bin/sdkmanager" ]; then
+        if [ ! -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
           echo "=== Downloading Android SDK ==="
+          cd "$ANDROID_HOME"
           wget -q "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" -O cmdline-tools.zip
           unzip -q cmdline-tools.zip
           mkdir -p cmdline-tools/latest
@@ -86,16 +87,14 @@ jobs:
         sdkmanager --install \
           "platforms;android-33" \
           "build-tools;33.0.2" \
-          "platform-tools" \
-          "ndk;25.1.8937393" \
-          "cmake;3.22.1"
+          "platform-tools"
         
         echo "=== Creating local.properties ==="
         cd /home/runner/work/Clock-3/Clock-3
         echo "sdk.dir=$ANDROID_HOME" > local.properties
-        echo "ndk.dir=$ANDROID_HOME/ndk/25.1.8937393" >> local.properties
         
         echo "=== SDK Setup Complete ==="
+        ls -la "$ANDROID_HOME"
 
     - name: Show buildozer.spec
       run: |
@@ -108,16 +107,13 @@ jobs:
       env:
         ANDROID_HOME: ${{ runner.home }}/android-sdk
         ANDROIDSDK: ${{ runner.home }}/android-sdk
-        ANDROIDNDK: ${{ runner.home }}/android-sdk/ndk/25.1.8937393
       run: |
         export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
         export ANDROIDSDK="$ANDROID_HOME"
-        export ANDROIDNDK="$ANDROID_HOME/ndk/25.1.8937393"
         
         echo "=== Environment ==="
         echo "ANDROID_HOME=$ANDROID_HOME"
         echo "ANDROIDSDK=$ANDROIDSDK"
-        echo "ANDROIDNDK=$ANDROIDNDK"
         ls -la "$ANDROID_HOME"
         
         echo "=== Current Directory ==="
