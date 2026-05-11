@@ -13,40 +13,51 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Debug - Check files
+    - name: Prepare assets
       run: |
-        echo "=== Files ==="
-        ls -la
-        echo ""
-        echo "=== buildozer.spec ==="
-        cat buildozer.spec || echo "buildozer.spec NOT FOUND"
-    
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    
-    - name: Install dependencies
-      run: |
-        pip install buildozer==1.5.0 || pip install buildozer || true
-        pip install cython
-    
-    - name: Install Android SDK
-      uses: android-actions/setup-android@v2
-    
-    - name: Build APK
-      env:
-        ANDROID_HOME: ${{ env.ANDROID_HOME }}
-      run: |
-        echo "ANDROID_HOME: $ANDROID_HOME"
         mkdir -p assets
         touch assets/alarm.mp3
         touch assets/icon.png
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
-        buildozer android debug || true
-        find . -name "*.apk" -type f
+        ls -la assets/
+    
+    - name: Build APK with Docker
+      run: |
+        set -e
+        
+        echo "=== Building APK with kivy/buildozer Docker ==="
+        
+        docker run --rm \
+          -v $(pwd):/home/user/clock3 \
+          -w /home/user/clock3 \
+          kivy/buildozer:latest \
+          /bin/sh -c "
+            set -e
+            echo '=== Docker Environment ==='
+            pwd
+            ls -la
+            echo 'sdk.dir=/opt/android-sdk' > local.properties
+            echo '=== Starting build ==='
+            buildozer android debug
+            echo '=== Build completed ==='
+            find . -name '*.apk' -type f
+          "
+        
+        echo "=== Checking for APK ==="
+        APK_FILES=$(find . -name "*.apk" -type f 2>/dev/null)
+        if [ -n "$APK_FILES" ]; then
+          echo "Found APK files:"
+          echo "$APK_FILES"
+          ls -lh $APK_FILES
+        else
+          echo "No APK found in current directory"
+          find . -name "*.apk" 2>/dev/null || echo "Searching in .buildozer..."
+          find .buildozer -name "*.apk" 2>/dev/null || true
+          echo "Build may have failed silently"
+          exit 1
+        fi
     
     - name: Upload APK
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: clock3-apk
@@ -54,5 +65,4 @@ jobs:
           bin/*.apk
           .buildozer/**/bin/*.apk
           ./**/*.apk
-        retention-days: 7
-        ignore-no-files: true
+        retention-days: 30
