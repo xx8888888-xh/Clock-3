@@ -24,6 +24,7 @@ jobs:
         if [ ! -f assets/icon.png ]; then
           touch assets/icon.png
         fi
+        mkdir -p bin
         ls -la assets/
 
     - name: Set up Python
@@ -95,7 +96,6 @@ jobs:
 
     - name: Build APK
       id: build
-      continue-on-error: true
       run: |
         export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
         export ANDROIDSDK="$ANDROID_HOME"
@@ -105,38 +105,43 @@ jobs:
         
         echo "=== Building APK with buildozer ==="
         
+        set +e
         buildozer android debug 2>&1 | tee buildozer.log
-        
-        BUILD_EXIT=$?
+        BUILD_EXIT=${PIPESTATUS[0]}
         echo "Buildozer exit code: $BUILD_EXIT"
         
         echo "=== Checking for APK ==="
+        mkdir -p bin
+        
         if ls bin/*.apk 2>/dev/null; then
           echo "SUCCESS: APK found in bin/"
           ls -lh bin/*.apk
-          echo "APK_BUILT=true" >> $GITHUB_ENV
         elif find .buildozer -name "*.apk" 2>/dev/null | head -1 | xargs -I {} ls -lh {} 2>/dev/null; then
           echo "SUCCESS: APK found in .buildozer"
-          find .buildozer -name "*.apk" -exec cp {} bin/ \;
-          ls -lh bin/*.apk
-          echo "APK_BUILT=true" >> $GITHUB_ENV
+          find .buildozer -name "*.apk" -exec cp {} bin/ \; 2>/dev/null || true
+          ls -lh bin/*.apk 2>/dev/null || true
         else
           echo "APK not found in expected locations"
-          echo "=== Last 200 lines of buildozer.log ==="
-          tail -200 buildozer.log || true
-          echo "APK_BUILT=false" >> $GITHUB_ENV
+          echo "=== Last 100 lines of buildozer.log ==="
+          tail -100 buildozer.log || true
         fi
         
-        exit $BUILD_EXIT
+        echo "=== Saving build log ==="
+        cp buildozer.log build_log.txt 2>/dev/null || true
 
-    - name: Show build log on failure
-      if: failure()
-      run: |
-        echo "=== Full buildozer.log ==="
-        cat buildozer.log 2>/dev/null || echo "No log file found"
+    - name: Upload build log
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: build-log
+        path: |
+          buildozer.log
+          build_log.txt
+          local.properties
+        retention-days: 7
 
     - name: Upload APK
-      if: success() && env.APK_BUILT == 'true'
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: clock3-apk
