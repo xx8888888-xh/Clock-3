@@ -36,7 +36,7 @@ version = 1.0.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy==2.3.0,plyer==2.1.0,sqlite3
+requirements = python3,kivy,plyer
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -90,13 +90,16 @@ android.permissions = INTERNET,VIBRATE,WAKE_LOCK,SYSTEM_ALERT_WINDOW
 android.api = 33
 
 # (int) Minimum API your APK will support.
-#android.minapi = 21
+android.minapi = 21
 
 # (int) Android SDK version to use
 #android.sdk = 26
 
 # (str) Android NDK version to use
-#android.ndk = 23b
+android.ndk = 25b
+
+# (list) The Android architectures to build for (default is armeabi-v7a, arm64-v8a, x86, x86_64)
+android.arch = armeabi-v7a
 
 # (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
 #android.ndk_api = 21
