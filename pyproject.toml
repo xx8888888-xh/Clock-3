@@ -8,9 +8,8 @@ version = "1.0.0"
 description = "智能桌面宠物闹钟应用"
 requires-python = ">=3.8"
 dependencies = [
-    "kivy==2.3.0",
-    "kivymd==1.2.0",
-    "plyer==2.1.0",
+    "kivy>=2.3.0,<3.0.0",
+    "plyer>=2.1.0,<3.0.0",
 ]
 
 [tool.setuptools]

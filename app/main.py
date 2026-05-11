@@ -115,17 +115,31 @@ class PetWidget(Widget):
         app.show_countdown()
     
     def start_animations(self):
-        if hasattr(self, 'float_animation_event') and self.float_animation_event:
-            Clock.unschedule(self.float_animation_event)
+        """启动宠物动画效果"""
+        if hasattr(self, '_float_anim_event') and self._float_anim_event:
+            Clock.unschedule(self._float_anim_event)
         
         def float_animation(dt):
             if not self.is_dragging and not pet_service.is_sleeping():
-                anim = Animation(y=self.pos_hint['y'] + 0.02, duration=1)
-                anim += Animation(y=self.pos_hint['y'], duration=1)
-                anim.start(self)
+                # 重用动画对象或创建新的
+                if not hasattr(self, '_float_up_anim') or not hasattr(self, '_float_down_anim'):
+                    self._float_up_anim = Animation(y=self.pos_hint['y'] + 0.02, duration=1)
+                    self._float_down_anim = Animation(y=self.pos_hint['y'], duration=1)
+                
+                # 如果动画正在运行，停止它
+                if hasattr(self, '_current_anim') and self._current_anim:
+                    self._current_anim.stop(self)
+                
+                # 执行上下浮动动画
+                self._float_up_anim.start(self)
+                self._current_anim = self._float_up_anim
+                self._float_up_anim.bind(on_complete=lambda *args: self._float_down_anim.start(self))
         
-        self.float_animation_event = float_animation
-        Clock.schedule_interval(self.float_animation_event, 2)
+        self._float_anim_event = float_animation
+        Clock.schedule_interval(self._float_anim_event, 3)
+        
+        # 立即开始第一次动画
+        Clock.schedule_once(float_animation, 0.5)
     
     def update_mood(self):
         status = pet_service.get_status()
@@ -203,9 +217,9 @@ class FloatingPetApp(App):
             print(f"通知失败: {e}")
     
     def play_alarm_sound(self):
+        """播放闹钟声音（有限循环）"""
         try:
             self.stop_alarm_sound()
-            from kivy.core.audio import SoundLoader
             import os
             sound_path = 'assets/alarm.mp3'
             if not os.path.exists(sound_path):
@@ -213,8 +227,13 @@ class FloatingPetApp(App):
                 return
             self.current_alarm_sound = SoundLoader.load(sound_path)
             if self.current_alarm_sound:
-                self.current_alarm_sound.loop = True
+                # 不设置loop=True，而是设置音量并播放
+                volume = config.get('sound_volume', 0.8)
+                self.current_alarm_sound.volume = volume
                 self.current_alarm_sound.play()
+                
+                # 安排30秒后自动停止（如果用户没有手动停止）
+                Clock.schedule_once(lambda dt: self.stop_alarm_sound(), 30)
         except Exception as e:
             print(f"播放声音失败: {e}")
     
@@ -709,18 +728,26 @@ class FloatingPetApp(App):
         popup.open()
     
     def dismiss_popup(self):
+        """关闭所有打开的弹出窗口"""
         popup_list = [
             'main_menu_popup', 'alarms_popup', 'add_alarm_popup',
             'countdown_popup', 'pet_popup', 'settings_popup',
             'alarm_popup', 'active_popup', 'countdown_complete_popup'
         ]
+        
         for attr_name in popup_list:
             try:
                 popup = getattr(self, attr_name, None)
-                if popup and hasattr(popup, 'dismiss'):
-                    popup.dismiss()
-            except Exception:
-                pass
+                if popup and hasattr(popup, 'dismiss') and hasattr(popup, '__class__'):
+                    # 检查是否确实是Popup实例
+                    if popup.__class__.__name__ == 'Popup':
+                        popup.dismiss()
+                        # 设置为None防止重复引用
+                        setattr(self, attr_name, None)
+            except Exception as e:
+                # 记录错误但不中断
+                import logging
+                logging.debug(f"关闭弹出窗口 {attr_name} 时出错: {e}")
     
     def update_status(self):
         pet_status = pet_service.get_status()
