@@ -4,17 +4,11 @@ on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
-    inputs:
-      debug:
-        description: 'Enable debug mode'
-        required: false
-        default: 'false'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
     - name: Checkout
@@ -22,14 +16,13 @@ jobs:
 
     - name: Prepare assets
       run: |
-        mkdir -p assets
+        mkdir -p assets bin
         if [ ! -f assets/alarm.mp3 ]; then
           touch assets/alarm.mp3
         fi
         if [ ! -f assets/icon.png ]; then
           touch assets/icon.png
         fi
-        mkdir -p bin
         ls -la assets/
 
     - name: Set up Python
@@ -61,7 +54,9 @@ jobs:
           libtool \
           unzip \
           openjdk-17-jdk \
-          zipalign
+          zipalign \
+          wget \
+          unzip
 
     - name: Install Python dependencies
       run: |
@@ -70,29 +65,41 @@ jobs:
         pip install buildozer==1.5.0
 
     - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        accept-android-sdk-licenses: true
-        packages: |
-          platforms;android-33
-          build-tools;33.0.2
-          platform-tools
-
-    - name: Configure Android SDK
       run: |
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
-        cat local.properties
+        export ANDROID_HOME="$HOME/android-sdk"
+        mkdir -p "$ANDROID_HOME"
         
-        mkdir -p $ANDROID_HOME/licenses
-        echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
-        echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> $ANDROID_HOME/licenses/android-sdk-license
-
-    - name: Show environment
-      run: |
-        echo "ANDROID_HOME=$ANDROID_HOME"
-        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-        ls -la $ANDROID_HOME/ 2>/dev/null || echo "SDK not found"
-        which sdkmanager || echo "sdkmanager not found"
+        echo "=== Downloading Android SDK ==="
+        cd "$ANDROID_HOME"
+        
+        if [ ! -f "cmdline-tools/latest/bin/sdkmanager" ]; then
+          wget -q "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
+          rm -f cmdline-tools.zip
+        fi
+        
+        export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+        
+        echo "=== Accepting licenses ==="
+        yes | sdkmanager --licenses 2>/dev/null || true
+        
+        echo "=== Installing SDK components ==="
+        sdkmanager --install \
+          "platforms;android-33" \
+          "build-tools;33.0.2" \
+          "platform-tools" \
+          "ndk;25.1.8937393" \
+          "cmake;3.22.1"
+        
+        echo "=== Creating local.properties ==="
+        cd /home/runner/work/Clock-3/Clock-3
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
+        echo "ndk.dir=$ANDROID_HOME/ndk/25.1.8937393" >> local.properties
+        
+        echo "=== SDK Setup Complete ==="
+        ls -la "$ANDROID_HOME"
 
     - name: Show buildozer.spec
       run: |
@@ -101,66 +108,54 @@ jobs:
 
     - name: Build APK
       id: build
-      timeout-minutes: 40
+      timeout-minutes: 45
+      env:
+        ANDROID_HOME: ${{ runner.home }}/android-sdk
+        ANDROIDSDK: ${{ runner.home }}/android-sdk
+        ANDROIDNDK: ${{ runner.home }}/android-sdk/ndk/25.1.8937393
       run: |
+        set -e
         export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
         export ANDROIDSDK="$ANDROID_HOME"
+        export ANDROIDNDK="$ANDROID_HOME/ndk/25.1.8937393"
+        
+        echo "=== Environment ==="
+        echo "ANDROID_HOME=$ANDROID_HOME"
+        echo "ANDROIDSDK=$ANDROIDSDK"
+        echo "ANDROIDNDK=$ANDROIDNDK"
+        ls -la "$ANDROID_HOME"
         
         echo "=== Current Directory ==="
         pwd
         ls -la
         
-        echo "=== Environment ==="
-        env | grep -E "(ANDROID|PYTHON)" || true
-        
-        echo "=== Check Python ==="
-        which python3
+        echo "=== Python Version ==="
         python3 --version
         pip3 list | grep -E "(buildozer|cython|kivy)"
         
-        echo "=== Check Android SDK ==="
-        ls -la $ANDROID_HOME/ 2>/dev/null || echo "SDK not found"
-        which sdkmanager 2>/dev/null || echo "sdkmanager not found"
+        echo "=== Clean previous builds ==="
+        rm -rf .buildozer bin/*.apk 2>/dev/null || true
         
-        echo "=== Check source files ==="
-        ls -la *.py app/*.py 2>/dev/null || true
-        
-        echo "=== Building APK with buildozer ==="
-        
-        set +e
+        echo "=== Building APK ==="
         buildozer android debug 2>&1 | tee buildozer.log
         BUILD_EXIT=${PIPESTATUS[0]}
-        echo "Buildozer exit code: $BUILD_EXIT"
         
-        echo "=== Checking for APK ==="
-        mkdir -p bin
-        
-        if ls bin/*.apk 2>/dev/null; then
-          echo "SUCCESS: APK found in bin/"
-          ls -lh bin/*.apk
-        elif find .buildozer -name "*.apk" 2>/dev/null | head -1 | xargs -I {} ls -lh {} 2>/dev/null; then
-          echo "SUCCESS: APK found in .buildozer"
-          find .buildozer -name "*.apk" -exec cp {} bin/ \; 2>/dev/null || true
-          ls -lh bin/*.apk 2>/dev/null || true
-        else
-          echo "APK not found in expected locations"
-          echo "=== Last 200 lines of buildozer.log ==="
-          tail -200 buildozer.log || true
+        if [ $BUILD_EXIT -ne 0 ]; then
+          echo "Build command exited with code $BUILD_EXIT"
+          echo "=== Last 100 lines of log ==="
+          tail -100 buildozer.log || true
+          exit 1
         fi
         
-        echo "=== Saving build log ==="
-        cp buildozer.log build_log.txt 2>/dev/null || true
+        echo "=== Build completed ==="
+        ls -la bin/ 2>/dev/null || true
+        find .buildozer -name '*.apk' 2>/dev/null || true
 
-    - name: Upload build log
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: build-log
-        path: |
-          buildozer.log
-          build_log.txt
-          local.properties
-        retention-days: 7
+    - name: Prepare APK for upload
+      run: |
+        mkdir -p bin
+        find .buildozer -name '*.apk' -exec cp {} bin/ \; 2>/dev/null || true
+        ls -la bin/
 
     - name: Upload APK
       if: success()
@@ -170,3 +165,11 @@ jobs:
         path: |
           bin/*.apk
         retention-days: 30
+
+    - name: Upload build log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log
+        path: buildozer.log
+        retention-days: 7
