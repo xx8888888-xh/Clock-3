@@ -220,7 +220,6 @@ class FloatingPetApp(App):
         """播放闹钟声音（有限循环）"""
         try:
             self.stop_alarm_sound()
-            import os
             sound_path = 'assets/alarm.mp3'
             if not os.path.exists(sound_path):
                 print(f"声音文件不存在: {sound_path}")
@@ -420,26 +419,40 @@ class FloatingPetApp(App):
         content.add_widget(time_input_layout)
         
         btn_layout = BoxLayout(orientation='horizontal', size_hint_y=0.15)
-        start_btn = Button(text='▶️ 开始', background_color=(0.2, 0.7, 0.3, 1))
+        start_resume_btn = Button(text='▶️ 开始', background_color=(0.2, 0.7, 0.3, 1))
         pause_btn = Button(text='⏸️ 暂停')
         reset_btn = Button(text='🔄 重置', background_color=(0.8, 0.6, 0.2, 1))
         
         self.current_countdown = None
         self.is_counting = False
         
-        def start_countdown(b):
+        def start_or_resume_countdown(b):
             try:
-                minutes = int(minute_input.text or 0)
-                seconds = int(second_input.text or 0)
-                total_seconds = minutes * 60 + seconds
-                
-                if total_seconds > 0:
-                    self.current_countdown = countdown_service.create_countdown(
-                        label_input.text or '倒计时',
-                        total_seconds
-                    )
+                if self.current_countdown and self.current_countdown.status == 'paused':
+                    # 恢复倒计时
+                    countdown_service.resume_countdown(self.current_countdown.id)
                     self.is_counting = True
+                    # 重新启动定时器
+                    if hasattr(self, 'countdown_event'):
+                        Clock.unschedule(self.countdown_event)
                     self.countdown_event = Clock.schedule_interval(self.update_countdown_display, 0.1)
+                    start_resume_btn.text = '▶️ 开始'
+                else:
+                    # 开始新的倒计时
+                    minutes = int(minute_input.text or 0)
+                    seconds = int(second_input.text or 0)
+                    total_seconds = minutes * 60 + seconds
+                    
+                    if total_seconds > 0:
+                        if hasattr(self, 'countdown_event'):
+                            Clock.unschedule(self.countdown_event)
+                        
+                        self.current_countdown = countdown_service.create_countdown(
+                            label_input.text or '倒计时',
+                            total_seconds
+                        )
+                        self.is_counting = True
+                        self.countdown_event = Clock.schedule_interval(self.update_countdown_display, 0.1)
             except ValueError:
                 pass
         
@@ -447,6 +460,7 @@ class FloatingPetApp(App):
             if self.current_countdown:
                 countdown_service.pause_countdown(self.current_countdown.id)
                 self.is_counting = False
+                start_resume_btn.text = '▶️ 继续'
         
         def reset_countdown(b):
             if self.current_countdown:
@@ -454,12 +468,15 @@ class FloatingPetApp(App):
                 self.current_countdown = None
                 self.countdown_display.text = '00:00'
                 self.is_counting = False
+                if hasattr(self, 'countdown_event'):
+                    Clock.unschedule(self.countdown_event)
+                start_resume_btn.text = '▶️ 开始'
         
-        start_btn.bind(on_press=start_countdown)
+        start_resume_btn.bind(on_press=start_or_resume_countdown)
         pause_btn.bind(on_press=pause_countdown)
         reset_btn.bind(on_press=reset_countdown)
         
-        btn_layout.add_widget(start_btn)
+        btn_layout.add_widget(start_resume_btn)
         btn_layout.add_widget(pause_btn)
         btn_layout.add_widget(reset_btn)
         content.add_widget(btn_layout)
@@ -479,6 +496,7 @@ class FloatingPetApp(App):
                     self.countdown_display.text = cd.get_formatted_time()
                     if cd.status == 'completed':
                         self.is_counting = False
+                        Clock.unschedule(self.countdown_event)
                     break
     
     def show_countdown_complete_popup(self, countdown):
