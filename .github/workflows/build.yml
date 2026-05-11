@@ -60,14 +60,63 @@ jobs:
         
         echo "=== Testing Pet.is_sleeping() logic ==="
         python -c "
+import sys
+sys.path.insert(0, '.')
 from app.models.pet import Pet
+
 pet = Pet()
-hour = 23
-print(f'Testing hour {hour}: is_sleeping = {22 <= hour < 7}')  # Should be True
-hour = 3
-print(f'Testing hour {hour}: is_sleeping = {22 <= hour < 7}')  # Should be True
-hour = 10
-print(f'Testing hour {hour}: is_sleeping = {22 <= hour < 7}')  # Should be False
+
+# Mock datetime for testing
+from datetime import datetime
+original_now = datetime.now
+
+# Test case 1: hour = 23 (should be sleeping)
+class MockDatetime23:
+    @staticmethod
+    def now():
+        return original_now().replace(hour=23, minute=0, second=0)
+
+import app.models.pet
+app.models.pet.datetime = MockDatetime23
+result = pet.is_sleeping()
+print(f'Testing hour 23: is_sleeping = {result}')
+if result:
+    print('✓ PASS: Hour 23 correctly identified as sleeping')
+else:
+    print('✗ FAIL: Hour 23 should be sleeping')
+    sys.exit(1)
+
+# Test case 2: hour = 3 (should be sleeping)
+class MockDatetime3:
+    @staticmethod
+    def now():
+        return original_now().replace(hour=3, minute=0, second=0)
+
+app.models.pet.datetime = MockDatetime3
+result = pet.is_sleeping()
+print(f'Testing hour 3: is_sleeping = {result}')
+if result:
+    print('✓ PASS: Hour 3 correctly identified as sleeping')
+else:
+    print('✗ FAIL: Hour 3 should be sleeping')
+    sys.exit(1)
+
+# Test case 3: hour = 10 (should NOT be sleeping)
+class MockDatetime10:
+    @staticmethod
+    def now():
+        return original_now().replace(hour=10, minute=0, second=0)
+
+app.models.pet.datetime = MockDatetime10
+result = pet.is_sleeping()
+print(f'Testing hour 10: is_sleeping = {result}')
+if not result:
+    print('✓ PASS: Hour 10 correctly identified as NOT sleeping')
+else:
+    print('✗ FAIL: Hour 10 should NOT be sleeping')
+    sys.exit(1)
+
+print('✓ All Pet.is_sleeping() tests passed!')
 "
 
   build:
