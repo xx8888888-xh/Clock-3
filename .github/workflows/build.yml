@@ -102,13 +102,10 @@ jobs:
         cat buildozer.spec
 
     - name: Build APK
-      id: build
       timeout-minutes: 45
-      env:
-        ANDROID_HOME: ${{ runner.home }}/android-sdk
-        ANDROIDSDK: ${{ runner.home }}/android-sdk
       run: |
-        export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
+        ANDROID_HOME="$HOME/android-sdk"
+        export ANDROID_HOME
         export ANDROIDSDK="$ANDROID_HOME"
         export PATH="$PATH:$HOME/.local/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
 
