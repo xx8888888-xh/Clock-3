@@ -65,7 +65,7 @@ jobs:
 
     - name: Set up Android SDK
       run: |
-        export ANDROID_HOME="$HOME/android-sdk"
+        ANDROID_HOME="$HOME/android-sdk"
         mkdir -p "$ANDROID_HOME"
 
         if [ ! -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
@@ -80,13 +80,15 @@ jobs:
 
         export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
 
-        echo "=== Accepting licenses ==="
-        yes | sdkmanager --licenses 2>/dev/null || true
+        echo "=== Accepting ALL licenses ==="
+        yes | sdkmanager --licenses || true
 
         echo "=== Installing SDK components ==="
         sdkmanager --install \
           "platforms;android-33" \
           "build-tools;33.0.2" \
+          "build-tools;34.0.0" \
+          "build-tools;37.0.0" \
           "platform-tools"
 
         echo "=== Creating local.properties ==="
@@ -112,7 +114,6 @@ jobs:
         echo "=== Environment ==="
         echo "ANDROID_HOME=$ANDROID_HOME"
         echo "ANDROIDSDK=$ANDROIDSDK"
-        echo "PATH=$PATH"
         ls -la "$ANDROID_HOME"
 
         echo "=== Current Directory ==="
@@ -134,6 +135,7 @@ jobs:
         echo "Build started at $(date)" > buildozer.log
         echo "Python: $(which python3)" >> buildozer.log
         echo "Buildozer: $(which buildozer || echo 'not found')" >> buildozer.log
+        echo "ANDROID_HOME: $ANDROID_HOME" >> buildozer.log
         echo "PATH: $PATH" >> buildozer.log
 
         python3 -m buildozer android debug >> buildozer.log 2>&1
