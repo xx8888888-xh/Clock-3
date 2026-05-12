@@ -272,16 +272,35 @@ class Database:
     
     def import_data(self, data):
         """导入数据"""
+        # 导入闹钟
         if 'alarms' in data:
             for alarm_dict in data['alarms']:
-                alarm = Alarm.from_dict(alarm_dict)
-                if alarm.id:
-                    self.update_alarm(alarm)
-                else:
+                try:
+                    alarm = Alarm.from_dict(alarm_dict)
+                    # 导入时不保留原ID，创建新记录
+                    alarm.id = None
                     self.add_alarm(alarm)
+                except Exception as e:
+                    print(f"导入闹钟失败: {e}")
         
+        # 导入倒计时
+        if 'countdowns' in data:
+            for cd_dict in data['countdowns']:
+                try:
+                    countdown = Countdown.from_dict(cd_dict)
+                    countdown.id = None
+                    self.add_countdown(countdown)
+                except Exception as e:
+                    print(f"导入倒计时失败: {e}")
+        
+        # 导入宠物数据
         if 'pet' in data:
-            pet = Pet.from_dict(data['pet'])
-            self.save_pet_data(pet)
+            try:
+                pet = Pet.from_dict(data['pet'])
+                # 宠物数据始终使用ID=1
+                pet.id = 1
+                self.save_pet_data(pet)
+            except Exception as e:
+                print(f"导入宠物数据失败: {e}")
 
 db = Database()

@@ -96,9 +96,6 @@ class AlarmService(private val context: Context) {
         )
 
         alarm.getNextTriggerTime()?.let { triggerTime ->
-            val triggerAtMillis = java.time.ZoneId.systemDefault()
-                .rules.getOffset(java.time.Instant.now())
-                .getOffset(java.time.Instant.now())
             val triggerAt = java.time.ZonedDateTime.of(triggerTime, java.time.ZoneId.systemDefault())
                 .toInstant()
                 .toEpochMilli()

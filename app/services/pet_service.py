@@ -49,10 +49,10 @@ class PetService:
             'level_up': level_up_messages
         }
     
-    def feed_pet(self):
+    def feed_pet(self) -> dict:
         """喂宠物"""
         if not self.pet:
-            return
+            return {'message': '宠物未加载', 'level_up': []}
         
         self.pet.mood = 'happy'
         exp_gain = self.pet.add_exp(10)
@@ -63,10 +63,10 @@ class PetService:
             'level_up': exp_gain
         }
     
-    def play_with_pet(self):
+    def play_with_pet(self) -> dict:
         """和宠物玩"""
         if not self.pet:
-            return
+            return {'message': '宠物未加载', 'level_up': []}
         
         self.pet.mood = 'excited'
         exp_gain = self.pet.add_exp(15)

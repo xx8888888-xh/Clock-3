@@ -1,33 +1,28 @@
 package com.clock3.pet.ui
 
 import android.Manifest
-import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.clock3.pet.R
 import com.clock3.pet.data.model.Alarm
-import com.clock3.pet.data.model.Pet
 import com.clock3.pet.data.repository.Clock3Repository
 import com.clock3.pet.service.AlarmService
 import com.clock3.pet.service.CountdownService
 import com.clock3.pet.service.FloatingPetService
 import com.clock3.pet.service.NotificationService
 import com.clock3.pet.service.PetService
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -232,7 +227,6 @@ class MainActivity : AppCompatActivity() {
                 val hour = hourSpinner.selectedItem.toString().toIntOrNull() ?: 8
                 val minute = minuteSpinner.selectedItem.toString().toIntOrNull() ?: 0
                 val time = String.format("%02d:%02d", hour, minute)
-                val repeat = (repeatSpinner.selectedItemPosition + 1).toString()
 
                 val alarm = Alarm(
                     label = label,

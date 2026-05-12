@@ -34,30 +34,29 @@ class PetService(context: Context) {
 
     suspend fun interact(): Map<String, Any> {
         val currentPet = pet ?: return mapOf("message" to "宠物未加载")
-        val levelUpMessages = currentPet.interact()
-        currentPet.lastInteraction = LocalDateTime.now()
-        currentPet.totalInteractions++
-        pet = currentPet.copy(mood = Pet.PetMood.random())
+        val (updatedPet, levelUpMessages) = currentPet.interact()
+        pet = updatedPet
 
         savePet()
         notifyStatusChange()
 
         return mapOf(
-            "message" to currentPet.getRandomMessage(),
-            "mood" to currentPet.mood.name,
-            "emoji" to currentPet.mood.emoji,
-            "level" to currentPet.level,
-            "exp" to currentPet.exp,
-            "exp_needed" to currentPet.getExpForNextLevel(),
+            "message" to updatedPet.getRandomMessage(),
+            "mood" to updatedPet.mood.name,
+            "emoji" to updatedPet.mood.emoji,
+            "level" to updatedPet.level,
+            "exp" to updatedPet.exp,
+            "exp_needed" to updatedPet.getExpForNextLevel(),
             "level_up" to levelUpMessages
         )
     }
 
     suspend fun feedPet(): Map<String, Any> {
         val currentPet = pet ?: return mapOf("message" to "宠物未加载")
-        currentPet.copy(mood = Pet.PetMood.HAPPY)
-        val levelUpMessages = currentPet.addExp(10)
-        pet = currentPet
+        // 更新心情并添加经验
+        val happyPet = currentPet.copy(mood = Pet.PetMood.HAPPY)
+        val (updatedPet, levelUpMessages) = happyPet.addExp(10)
+        pet = updatedPet
 
         savePet()
         notifyStatusChange()
@@ -70,9 +69,10 @@ class PetService(context: Context) {
 
     suspend fun playWithPet(): Map<String, Any> {
         val currentPet = pet ?: return mapOf("message" to "宠物未加载")
-        pet = currentPet.copy(mood = Pet.PetMood.EXCITED)
-        val levelUpMessages = currentPet.addExp(15)
-        pet = currentPet
+        // 更新心情并添加经验
+        val excitedPet = currentPet.copy(mood = Pet.PetMood.EXCITED)
+        val (updatedPet, levelUpMessages) = excitedPet.addExp(15)
+        pet = updatedPet
 
         savePet()
         notifyStatusChange()

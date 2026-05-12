@@ -135,6 +135,17 @@ class PetWidget(Widget):
 class FloatingPetApp(App):
     """主应用"""
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.main_menu_popup = None
+        self.alarms_popup = None
+        self.add_alarm_popup = None
+        self.countdown_popup = None
+        self.pet_popup = None
+        self.settings_popup = None
+        self.alarm_popup = None
+        self.active_popup = None
+    
     def build(self):
         Window.clearcolor = (0.95, 0.95, 0.95, 1)
         
@@ -687,25 +698,23 @@ class FloatingPetApp(App):
         popup.open()
     
     def dismiss_popup(self):
-        try:
-            if hasattr(self, 'main_menu_popup') and self.main_menu_popup.__class__.__name__ == 'Popup':
-                self.main_menu_popup.dismiss()
-            if hasattr(self, 'alarms_popup') and self.alarms_popup.__class__.__name__ == 'Popup':
-                self.alarms_popup.dismiss()
-            if hasattr(self, 'add_alarm_popup') and self.add_alarm_popup.__class__.__name__ == 'Popup':
-                self.add_alarm_popup.dismiss()
-            if hasattr(self, 'countdown_popup') and self.countdown_popup.__class__.__name__ == 'Popup':
-                self.countdown_popup.dismiss()
-            if hasattr(self, 'pet_popup') and self.pet_popup.__class__.__name__ == 'Popup':
-                self.pet_popup.dismiss()
-            if hasattr(self, 'settings_popup') and self.settings_popup.__class__.__name__ == 'Popup':
-                self.settings_popup.dismiss()
-            if hasattr(self, 'alarm_popup') and self.alarm_popup.__class__.__name__ == 'Popup':
-                self.alarm_popup.dismiss()
-            if hasattr(self, 'active_popup') and self.active_popup.__class__.__name__ == 'Popup':
-                self.active_popup.dismiss()
-        except Exception:
-            pass
+        popups = [
+            self.main_menu_popup,
+            self.alarms_popup,
+            self.add_alarm_popup,
+            self.countdown_popup,
+            self.pet_popup,
+            self.settings_popup,
+            self.alarm_popup,
+            self.active_popup
+        ]
+        
+        for popup in popups:
+            if popup:
+                try:
+                    popup.dismiss()
+                except Exception:
+                    pass
     
     def update_status(self):
         pet_status = pet_service.get_status()

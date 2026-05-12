@@ -33,27 +33,32 @@ data class Pet(
         return level * 100
     }
 
-    fun addExp(amount: Int): List<String> {
+    fun addExp(amount: Int): Pair<Pet, List<String>> {
         var newExp = exp + amount
         var newLevel = level
         val messages = mutableListOf<String>()
 
-        while (newExp >= getExpForNextLevel()) {
-            newExp -= getExpForNextLevel()
+        while (newExp >= newLevel * 100) {
+            newExp -= newLevel * 100
             newLevel++
             messages.add("🎉 恭喜升级到 $newLevel 级!")
         }
 
-        return if (messages.isNotEmpty()) {
-            messages
-        } else {
-            emptyList()
-        }
+        return Pair(this.copy(exp = newExp, level = newLevel), messages)
     }
 
-    fun interact(): List<String> {
+    fun interact(): Pair<Pet, List<String>> {
         val newExp = 5 + (level * 2)
-        return addExp(newExp)
+        val (updatedPet, levelUpMessages) = addExp(newExp)
+        val newMood = PetMood.random()
+        return Pair(
+            updatedPet.copy(
+                mood = newMood,
+                lastInteraction = LocalDateTime.now(),
+                totalInteractions = totalInteractions + 1
+            ),
+            levelUpMessages
+        )
     }
 
     fun getRandomMessage(): String {
