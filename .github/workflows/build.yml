@@ -20,24 +20,35 @@ jobs:
         touch assets/icon.png
 
     - name: Build with Docker
+      id: build
       uses: addnab/docker-run-action@v3
       with:
         image: kivy/buildozer:latest
         options: -v ${{ github.workspace }}:/home/user/clock3 -w /home/user/clock3 -u root
         run: |
-          ls -la
-          buildozer android debug
-          echo "=== Find APK ==="
-          find . -name "*.apk" 2>/dev/null || true
-          echo "=== Copy APK to bin ==="
-          find . -name "*.apk" -exec cp {} bin/ \; 2>/dev/null || true
-          ls -la bin/ || true
+          echo "=== Build Start ===" | tee buildozer.log
+          date | tee -a buildozer.log
+          ls -la | tee -a buildozer.log
+          buildozer android debug 2>&1 | tee -a buildozer.log
+          echo "=== Build End ===" | tee -a buildozer.log
+          echo "=== Find APK ===" | tee -a buildozer.log
+          find . -name "*.apk" 2>/dev/null | tee -a buildozer.log || echo "No APK found" | tee -a buildozer.log
+          echo "=== Check bin ===" | tee -a buildozer.log
+          mkdir -p bin
+          find . -name "*.apk" -exec cp {} bin/ \; 2>/dev/null || echo "No APK copied" | tee -a buildozer.log
+          ls -la bin/ | tee -a buildozer.log
+          echo "=== Final Status ===" | tee -a buildozer.log
+          ls -la | tee -a buildozer.log
 
-    - name: Check
+    - name: Check files
       if: always()
       run: |
+        echo "=== Checking bin directory ==="
         ls -la bin/ || true
-        find . -name "*.apk" 2>/dev/null || true
+        echo "=== Finding all APKs ==="
+        find . -name "*.apk" 2>/dev/null || echo "No APK found in repository"
+        echo "=== Listing root directory ==="
+        ls -la || true
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -54,4 +65,3 @@ jobs:
         name: build-log
         path: |
           buildozer.log
-          .buildozer/logs/*
