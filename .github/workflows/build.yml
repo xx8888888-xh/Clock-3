@@ -26,29 +26,35 @@ jobs:
         image: kivy/buildozer:latest
         options: -v ${{ github.workspace }}:/home/user/clock3 -w /home/user/clock3 -u root
         run: |
-          echo "=== Build Start ===" | tee buildozer.log
+          echo "=== System Info ===" | tee buildozer.log
+          whoami | tee -a buildozer.log
+          pwd | tee -a buildozer.log
+          ls -la | tee -a buildozer.log
+          echo "=== Build Config ===" | tee -a buildozer.log
+          cat buildozer.spec | tee -a buildozer.log
+          echo "=== Build Start ===" | tee -a buildozer.log
           date | tee -a buildozer.log
-          ls -la | tee -a buildozer.log
           buildozer android debug 2>&1 | tee -a buildozer.log
-          echo "=== Build End ===" | tee -a buildozer.log
-          echo "=== Find APK ===" | tee -a buildozer.log
-          find . -name "*.apk" 2>/dev/null | tee -a buildozer.log || echo "No APK found" | tee -a buildozer.log
-          echo "=== Check bin ===" | tee -a buildozer.log
-          mkdir -p bin
-          find . -name "*.apk" -exec cp {} bin/ \; 2>/dev/null || echo "No APK copied" | tee -a buildozer.log
-          ls -la bin/ | tee -a buildozer.log
-          echo "=== Final Status ===" | tee -a buildozer.log
-          ls -la | tee -a buildozer.log
+          echo "=== Build Complete ===" | tee -a buildozer.log
+          date | tee -a buildozer.log
+          echo "=== Find APK in entire filesystem ===" | tee -a buildozer.log
+          find / -name "*.apk" 2>/dev/null | tee -a buildozer.log || echo "No APK found" | tee -a buildozer.log
+          echo "=== Check common locations ===" | tee -a buildozer.log
+          ls -la /home/user/clock3/bin/ 2>/dev/null | tee -a buildozer.log || echo "bin/ not found" | tee -a buildozer.log
+          ls -la /home/user/clock3/.buildozer/android/platform/python-for-android/dist/ 2>/dev/null | tee -a buildozer.log || echo "dist/ not found" | tee -a buildozer.log
+          ls -la /home/user/.buildozer/ 2>/dev/null | tee -a buildozer.log || echo ".buildozer not found" | tee -a buildozer.log
+          echo "=== Copy APK to bin ===" | tee -a buildozer.log
+          mkdir -p /home/user/clock3/bin
+          find /home/user -name "*.apk" -exec cp {} /home/user/clock3/bin/ \; 2>/dev/null && echo "APK copied" | tee -a buildozer.log || echo "No APK to copy" | tee -a buildozer.log
+          ls -la /home/user/clock3/bin/ | tee -a buildozer.log
 
     - name: Check files
       if: always()
       run: |
-        echo "=== Checking bin directory ==="
-        ls -la bin/ || true
-        echo "=== Finding all APKs ==="
-        find . -name "*.apk" 2>/dev/null || echo "No APK found in repository"
-        echo "=== Listing root directory ==="
-        ls -la || true
+        echo "=== Runner filesystem ==="
+        ls -la bin/ || echo "No bin directory"
+        echo "=== All APKs ==="
+        find . -name "*.apk" 2>/dev/null || echo "No APK found"
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
