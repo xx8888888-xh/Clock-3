@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 from typing import Callable, Optional
 from app.database import db
 from app.models.pet import Pet
@@ -52,41 +53,60 @@ class PetService:
     def feed_pet(self):
         """喂宠物"""
         if not self.pet:
-            return
+            return {'message': '宠物未加载', 'level_up': []}
         
         self.pet.mood = 'happy'
+        self.pet.last_interaction = datetime.now().isoformat()
+        self.pet.total_interactions += 1
         exp_gain = self.pet.add_exp(10)
         self.save_pet()
         
         return {
             'message': '好吃! 谢谢喂我~',
+            'mood': self.pet.mood,
+            'emoji': self.pet.get_mood_emoji(),
+            'level': self.pet.level,
+            'exp': self.pet.exp,
+            'exp_needed': self.pet.get_exp_for_next_level(),
             'level_up': exp_gain
         }
     
     def play_with_pet(self):
         """和宠物玩"""
         if not self.pet:
-            return
+            return {'message': '宠物未加载', 'level_up': []}
         
         self.pet.mood = 'excited'
+        self.pet.last_interaction = datetime.now().isoformat()
+        self.pet.total_interactions += 1
         exp_gain = self.pet.add_exp(15)
         self.save_pet()
         
         return {
             'message': '太好玩了! 再来再来!',
+            'mood': self.pet.mood,
+            'emoji': self.pet.get_mood_emoji(),
+            'level': self.pet.level,
+            'exp': self.pet.exp,
+            'exp_needed': self.pet.get_exp_for_next_level(),
             'level_up': exp_gain
         }
     
     def pet_sleep(self):
         """宠物睡觉"""
         if not self.pet:
-            return
+            return {'message': '宠物未加载'}
         
         self.pet.mood = 'sleepy'
         self.save_pet()
         
         return {
-            'message': '困了... zzZ...'
+            'message': '困了... zzZ...',
+            'mood': self.pet.mood,
+            'emoji': self.pet.get_mood_emoji(),
+            'level': self.pet.level,
+            'exp': self.pet.exp,
+            'exp_needed': self.pet.get_exp_for_next_level()
         }
     
     def is_sleeping(self) -> bool:

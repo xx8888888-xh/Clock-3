@@ -280,6 +280,14 @@ class Database:
                 else:
                     self.add_alarm(alarm)
         
+        if 'countdowns' in data:
+            for cd_dict in data['countdowns']:
+                cd = Countdown.from_dict(cd_dict)
+                if cd.id:
+                    self.update_countdown(cd)
+                else:
+                    self.add_countdown(cd)
+        
         if 'pet' in data:
             pet = Pet.from_dict(data['pet'])
             self.save_pet_data(pet)

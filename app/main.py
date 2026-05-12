@@ -41,32 +41,49 @@ from app.services.pet_service import pet_service
 class PetWidget(Widget):
     """悬浮球宠物组件"""
     
-    size_hint = NumericProperty(0.15)
+    pet_size = NumericProperty(100)
     is_dragging = BooleanProperty(False)
     last_touch_time = 0
     touch_count = 0
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.pos_hint = {'x': config.get('pet_x', 0.85), 'y': config.get('pet_y', 0.75)}
-        self.size_hint = (config.get('pet_size', 100) / Window.width, config.get('pet_size', 100) / Window.height)
+        self.size = (config.get('pet_size', 100), config.get('pet_size', 100))
+        self.pos = (
+            config.get('pet_x', Window.width * 0.85), 
+            config.get('pet_y', Window.height * 0.75)
+        )
         pet_service.load_pet()
         self.update_mood()
         self.start_animations()
         self.touch_timer = None
+        
+        # Bind size changes
+        self.bind(size=self.update_canvas)
+        self.update_canvas()
     
+    def update_canvas(self, *args):
+        self.canvas.clear()
+        with self.canvas:
+            Color(0.3, 0.5, 0.8, 1)
+            Ellipse(pos=self.pos, size=self.size)
+            
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
             self.is_dragging = True
             touch_count = self.check_touch_count()
             
             if touch_count == 1:
-                Clock.schedule_once(lambda dt: self.single_tap(), 0.3)
+                self.touch_timer = Clock.schedule_once(lambda dt: self.single_tap(), 0.3)
             elif touch_count == 2:
-                Clock.unschedule(self.single_tap)
+                if self.touch_timer:
+                    Clock.unschedule(self.touch_timer)
+                    self.touch_timer = None
                 self.double_tap()
             elif touch_count == 3:
-                Clock.unschedule(self.single_tap)
+                if self.touch_timer:
+                    Clock.unschedule(self.touch_timer)
+                    self.touch_timer = None
                 self.triple_tap()
             
             return True
@@ -74,15 +91,13 @@ class PetWidget(Widget):
     
     def on_touch_move(self, touch):
         if self.is_dragging and self.collide_point(*touch.pos):
-            new_x = touch.x / Window.width
-            new_y = touch.y / Window.height
+            new_x = max(0, min(Window.width - self.width, touch.x - self.width / 2))
+            new_y = max(0, min(Window.height - self.height, touch.y - self.height / 2))
             
-            new_x = max(0, min(0.85, new_x))
-            new_y = max(0, min(0.85, new_y))
-            
-            self.pos_hint = {'x': new_x, 'y': new_y}
+            self.pos = (new_x, new_y)
             config.set('pet_x', new_x)
             config.set('pet_y', new_y)
+            self.update_canvas()
             return True
         return super().on_touch_move(touch)
     
@@ -115,10 +130,12 @@ class PetWidget(Widget):
         app.show_countdown()
     
     def start_animations(self):
+        """简单的上下浮动动画"""
         def float_animation(dt):
             if not self.is_dragging and not pet_service.is_sleeping():
-                anim = Animation(y=self.pos_hint['y'] + 0.02, duration=1)
-                anim += Animation(y=self.pos_hint['y'], duration=1)
+                original_y = self.pos[1]
+                anim = Animation(pos=(self.pos[0], original_y + 20), duration=1) + \
+                       Animation(pos=(self.pos[0], original_y), duration=1)
                 anim.start(self)
         
         Clock.schedule_interval(float_animation, 2)
@@ -170,11 +187,14 @@ class FloatingPetApp(App):
     def update_clock(self, dt):
         current_time = datetime.now().strftime('%H:%M:%S')
         next_alarm = alarm_service.get_next_alarm()
-        next_alarm_text = f" | 下一个: {next_alarm.label} @ {next_alarm.time}" if next_alarm else ""
+        if next_alarm:
+            next_alarm_text = f" | 下一个: {next_alarm.label} @ {next_alarm.time}"
+        else:
+            next_alarm_text = ""
         self.status_label.text = f'{current_time}{next_alarm_text}'
         
-        if pet_service.is_sleeping() and self.pet.mood != 'sleepy':
-            self.pet.update_mood()
+        if pet_service.is_sleeping():
+            pass  # Could update pet mood
     
     def on_alarm_trigger(self, alarm):
         self.show_alarm_popup(alarm)
@@ -200,10 +220,12 @@ class FloatingPetApp(App):
     def play_alarm_sound(self):
         try:
             from kivy.core.audio import SoundLoader
-            sound = SoundLoader.load('assets/alarm.mp3')
-            if sound:
-                sound.loop = True
-                sound.play()
+            # Try to load sound, but if not available just pass
+            if os.path.exists('assets/alarm.mp3'):
+                sound = SoundLoader.load('assets/alarm.mp3')
+                if sound:
+                    sound.loop = True
+                    sound.play()
         except Exception as e:
             print(f"播放声音失败: {e}")
     
@@ -269,7 +291,7 @@ class FloatingPetApp(App):
                 alarm_layout.add_widget(alarm_info)
                 
                 switch = Switch(active=alarm.enabled, size_hint_x=0.2)
-                switch.bind(active=lambda s, a, al=alarm: self.toggle_alarm(al, s.active))
+                switch.bind(active=lambda s, a, al=alarm: self.toggle_alarm(al, a))
                 alarm_layout.add_widget(switch)
                 
                 delete_btn = Button(text='🗑️', size_hint_x=0.15, background_color=(0.8, 0.2, 0.2, 1))
@@ -386,6 +408,7 @@ class FloatingPetApp(App):
         
         self.current_countdown = None
         self.is_counting = False
+        self.countdown_event = None
         
         def start_countdown(b):
             try:
@@ -399,6 +422,8 @@ class FloatingPetApp(App):
                         total_seconds
                     )
                     self.is_counting = True
+                    if self.countdown_event:
+                        Clock.unschedule(self.countdown_event)
                     self.countdown_event = Clock.schedule_interval(self.update_countdown_display, 0.1)
             except ValueError:
                 pass
@@ -412,8 +437,11 @@ class FloatingPetApp(App):
             if self.current_countdown:
                 countdown_service.delete_countdown(self.current_countdown.id)
                 self.current_countdown = None
-                self.countdown_display.text = '00:00'
-                self.is_counting = False
+            self.countdown_display.text = '00:00'
+            self.is_counting = False
+            if self.countdown_event:
+                Clock.unschedule(self.countdown_event)
+                self.countdown_event = None
         
         start_btn.bind(on_press=start_countdown)
         pause_btn.bind(on_press=pause_countdown)
@@ -439,6 +467,9 @@ class FloatingPetApp(App):
                     self.countdown_display.text = cd.get_formatted_time()
                     if cd.status == 'completed':
                         self.is_counting = False
+                        if self.countdown_event:
+                            Clock.unschedule(self.countdown_event)
+                            self.countdown_event = None
                     break
     
     def show_countdown_complete_popup(self, countdown):
@@ -525,8 +556,11 @@ class FloatingPetApp(App):
             size_hint_y=0.1
         ))
         
+        msg_text = status.get('message', '')
+        if not msg_text and pet_service.pet:
+            msg_text = pet_service.pet.get_random_message()
         content.add_widget(Label(
-            text=status.get('message', pet_service.pet.get_random_message() if pet_service.pet else '你好!'),
+            text=msg_text or '你好!',
             font_size=16,
             size_hint_y=0.2,
             color=(0.3, 0.3, 0.8, 1)
@@ -556,15 +590,15 @@ class FloatingPetApp(App):
         self.pet_popup.open()
     
     def interact_with_pet(self):
-        result = pet_service.interact()
+        pet_service.interact()
         self.show_pet_status()
     
     def feed_pet(self):
-        result = pet_service.feed_pet()
+        pet_service.feed_pet()
         self.show_pet_status()
     
     def play_with_pet(self):
-        result = pet_service.play_with_pet()
+        pet_service.play_with_pet()
         self.show_pet_status()
     
     def show_settings(self):
@@ -586,9 +620,17 @@ class FloatingPetApp(App):
         
         for label, key, min_val, max_val in settings_items:
             item_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=80)
-            item_layout.add_widget(Label(text=f'{label}: {config.get(key)}', size_hint_y=0.4, halign='left'))
+            value_label = Label(text=f'{label}: {config.get(key)}', size_hint_y=0.4, halign='left')
+            item_layout.add_widget(value_label)
             slider = Slider(min=min_val, max=max_val, value=config.get(key), size_hint_y=0.6)
-            slider.bind(value=lambda s, v, k=key: self.update_setting(k, v))
+            
+            def update_slider_label(slider_val, vl=value_label, lbl=label):
+                vl.text = f'{lbl}: {slider_val:.2f}' if isinstance(slider_val, float) else f'{lbl}: {slider_val}'
+            
+            slider.bind(value=lambda s, v, k=key, vl=value_label, lbl=label: (
+                self.update_setting(k, v),
+                update_slider_label(v, vl, lbl)
+            ))
             item_layout.add_widget(slider)
             layout.add_widget(item_layout)
         
@@ -607,7 +649,7 @@ class FloatingPetApp(App):
             layout.add_widget(item_layout)
         
         reset_btn = Button(text='🔄 恢复默认设置', size_hint_y=None, height=50, background_color=(0.8, 0.3, 0.3, 1))
-        reset_btn.bind(on_press=lambda b: self.reset_settings())
+        reset_btn.bind(on_press=lambda b: (config.reset(), self.show_settings()))
         layout.add_widget(reset_btn)
         
         back_btn = Button(text='← 返回', size_hint_y=None, height=50)
@@ -622,11 +664,8 @@ class FloatingPetApp(App):
     def update_setting(self, key, value):
         config.set(key, value)
         if key == 'pet_size':
-            self.pet.size_hint = (value / Window.width, value / Window.height)
-    
-    def reset_settings(self):
-        config.reset()
-        self.show_settings()
+            self.pet.size = (value, value)
+            self.pet.update_canvas()
     
     def export_data(self):
         self.dismiss_popup()
@@ -649,6 +688,7 @@ class FloatingPetApp(App):
         content = BoxLayout(orientation='vertical', padding=20)
         
         file_input = TextInput(hint_text='输入文件名', multiline=False, size_hint_y=0.3)
+        file_input.text = 'clock3_backup.json'
         content.add_widget(file_input)
         
         def do_import(b):
@@ -658,6 +698,7 @@ class FloatingPetApp(App):
                     data = json.load(f)
                 db.import_data(data)
                 alarm_service.load_alarms()
+                countdown_service.load_countdowns()
                 pet_service.load_pet()
                 self.show_message('导入成功!')
             except FileNotFoundError:
@@ -688,21 +729,21 @@ class FloatingPetApp(App):
     
     def dismiss_popup(self):
         try:
-            if hasattr(self, 'main_menu_popup') and self.main_menu_popup.__class__.__name__ == 'Popup':
+            if hasattr(self, 'main_menu_popup'):
                 self.main_menu_popup.dismiss()
-            if hasattr(self, 'alarms_popup') and self.alarms_popup.__class__.__name__ == 'Popup':
+            if hasattr(self, 'alarms_popup'):
                 self.alarms_popup.dismiss()
-            if hasattr(self, 'add_alarm_popup') and self.add_alarm_popup.__class__.__name__ == 'Popup':
+            if hasattr(self, 'add_alarm_popup'):
                 self.add_alarm_popup.dismiss()
-            if hasattr(self, 'countdown_popup') and self.countdown_popup.__class__.__name__ == 'Popup':
+            if hasattr(self, 'countdown_popup'):
                 self.countdown_popup.dismiss()
-            if hasattr(self, 'pet_popup') and self.pet_popup.__class__.__name__ == 'Popup':
+            if hasattr(self, 'pet_popup'):
                 self.pet_popup.dismiss()
-            if hasattr(self, 'settings_popup') and self.settings_popup.__class__.__name__ == 'Popup':
+            if hasattr(self, 'settings_popup'):
                 self.settings_popup.dismiss()
-            if hasattr(self, 'alarm_popup') and self.alarm_popup.__class__.__name__ == 'Popup':
+            if hasattr(self, 'alarm_popup'):
                 self.alarm_popup.dismiss()
-            if hasattr(self, 'active_popup') and self.active_popup.__class__.__name__ == 'Popup':
+            if hasattr(self, 'active_popup'):
                 self.active_popup.dismiss()
         except Exception:
             pass
@@ -711,7 +752,7 @@ class FloatingPetApp(App):
         pet_status = pet_service.get_status()
         alarm_count = len([a for a in alarm_service.alarms if a.enabled])
         self.status_label.text = f"宠物: {pet_status.get('name')} | 活跃闹钟: {alarm_count}"
-
+    
     def on_stop(self):
         alarm_service.stop_checking()
         countdown_service.stop_checking()

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 import json
 
@@ -45,30 +45,30 @@ class Alarm:
         
         elif self.repeat_type == 'daily':
             if target <= now:
-                target = target.replace(day=now.day + 1)
+                target += timedelta(days=1)
             return target
         
         elif self.repeat_type == 'workdays':
-            weekdays = [1, 2, 3, 4, 5]
+            weekdays = [0, 1, 2, 3, 4]  # Monday is 0
             while True:
                 if target.weekday() in weekdays:
                     if target > now:
                         return target
-                target = target.replace(day=target.day + 1)
+                target += timedelta(days=1)
         
         elif self.repeat_type == 'weekend':
             while True:
                 if target.weekday() in [5, 6]:
                     if target > now:
                         return target
-                target = target.replace(day=target.day + 1)
+                target += timedelta(days=1)
         
         elif self.repeat_type == 'custom' and self.repeat_days:
             while True:
                 if target.weekday() in self.repeat_days:
                     if target > now:
                         return target
-                target = target.replace(day=target.day + 1)
+                target += timedelta(days=1)
         
         return None
     
@@ -79,7 +79,7 @@ class Alarm:
         elif self.repeat_type == 'daily':
             return True
         elif self.repeat_type == 'workdays':
-            return datetime.now().weekday() in [1, 2, 3, 4, 5]
+            return datetime.now().weekday() in [0, 1, 2, 3, 4]
         elif self.repeat_type == 'weekend':
             return datetime.now().weekday() in [5, 6]
         elif self.repeat_type == 'custom':
