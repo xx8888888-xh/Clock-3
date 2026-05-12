@@ -7,24 +7,38 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 300
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
 
-    - name: Prepare files
+    - name: Prepare assets
       run: |
-        mkdir -p assets
+        mkdir -p assets bin
         touch assets/alarm.mp3
         touch assets/icon.png
 
-    - name: Build with Buildozer
-      uses: kivy/buildozer-action@master
-      with:
-        command: android debug
+    - name: Install dependencies
+      run: |
+        pip3 install --upgrade pip setuptools wheel
+        pip3 install cython==0.29.37
+        pip3 install buildozer==1.5.0
 
+    - name: Buildozer dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential git python3-pip python3-dev libncurses5:i386 libstdc++6:i386 zlib1g:i386 autoconf libtool pkg-config zlib1g-dev openjdk-11-jdk-headless
+
+    - name: Build APK
+      id: build
+      run: |
+        ls -la
+        buildozer android debug 2>&1 | tee buildozer.log
+        
     - name: Check build
       if: always()
       run: |
@@ -32,14 +46,13 @@ jobs:
         ls -la || true
         
     - name: Upload APK
-      if: success()
       uses: actions/upload-artifact@v4
+      if: success()
       with:
         name: clock3-apk
         path: bin/*.apk
-        retention-days: 30
         
-    - name: Upload artifacts
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -47,4 +60,3 @@ jobs:
         path: |
           buildozer.log
           bin/
-        retention-days: 7
