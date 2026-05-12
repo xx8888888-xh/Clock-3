@@ -7,14 +7,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.8'
 
     - name: Prepare
       run: |
@@ -22,32 +19,22 @@ jobs:
         touch assets/alarm.mp3
         touch assets/icon.png
 
-    - name: Install system deps
-      run: |
-        sudo apt-get update -qq
-        sudo apt-get install -y -qq --no-install-recommends \
-          build-essential git python3-pip python3-dev autoconf libtool pkg-config \
-          openjdk-11-jdk-headless libncurses5:i386 libstdc++6:i386 zlib1g:i386 zip unzip
+    - name: Build with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+        image: kivy/buildozer:latest
+        options: -v ${{ github.workspace }}:/home/user/clock3 -w /home/user/clock3 -u root
+        run: |
+          ls -la
+          buildozer android debug
+          ls -la bin/
 
-    - name: Install Python packages
-      run: |
-        pip install --upgrade pip setuptools wheel
-        pip install cython==0.29.37
-        pip install buildozer==1.4.0
-
-    - name: Build APK
-      id: build
-      run: |
-        ls -la
-        buildozer android debug 2>&1 | tee buildozer.log
-        echo "=== Finding APK ==="
-        find . -name "*.apk" 2>/dev/null || true
-        
-    - name: Check build
+    - name: Check
       if: always()
       run: |
         ls -la bin/ || true
         ls -la || true
+        find . -name "*.apk" -type f 2>/dev/null || true
         
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -56,7 +43,7 @@ jobs:
         name: clock3-apk
         path: bin/*.apk
         
-    - name: Upload build log
+    - name: Upload logs
       uses: actions/upload-artifact@v4
       if: always()
       with:
