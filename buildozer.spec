@@ -9,6 +9,7 @@ requirements = python3,kivy,plyer
 orientation = portrait
 fullscreen = 0
 android.permissions = INTERNET,VIBRATE,WAKE_LOCK,SYSTEM_ALERT_WINDOW
+android.accept_sdk_license = True
 
 [buildozer]
 log_level = 2
