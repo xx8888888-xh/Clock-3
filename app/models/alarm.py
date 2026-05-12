@@ -45,30 +45,27 @@ class Alarm:
         
         elif self.repeat_type == 'daily':
             if target <= now:
-                target = target.replace(day=now.day + 1)
+                target = target + timedelta(days=1)
             return target
         
         elif self.repeat_type == 'workdays':
             weekdays = [1, 2, 3, 4, 5]
             while True:
-                if target.weekday() in weekdays:
-                    if target > now:
-                        return target
-                target = target.replace(day=target.day + 1)
+                if target.weekday() in weekdays and target > now:
+                    return target
+                target = target + timedelta(days=1)
         
         elif self.repeat_type == 'weekend':
             while True:
-                if target.weekday() in [5, 6]:
-                    if target > now:
-                        return target
-                target = target.replace(day=target.day + 1)
+                if target.weekday() in [5, 6] and target > now:
+                    return target
+                target = target + timedelta(days=1)
         
         elif self.repeat_type == 'custom' and self.repeat_days:
             while True:
-                if target.weekday() in self.repeat_days:
-                    if target > now:
-                        return target
-                target = target.replace(day=target.day + 1)
+                if target.weekday() in self.repeat_days and target > now:
+                    return target
+                target = target + timedelta(days=1)
         
         return None
     

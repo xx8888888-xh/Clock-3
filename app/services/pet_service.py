@@ -55,12 +55,17 @@ class PetService:
             return {'message': '宠物未加载', 'level_up': []}
         
         self.pet.mood = 'happy'
-        exp_gain = self.pet.add_exp(10)
+        level_up_messages = self.pet.add_exp(10)
         self.save_pet()
         
         return {
             'message': '好吃! 谢谢喂我~',
-            'level_up': exp_gain
+            'mood': self.pet.mood,
+            'emoji': self.pet.get_mood_emoji(),
+            'level': self.pet.level,
+            'exp': self.pet.exp,
+            'exp_needed': self.pet.get_exp_for_next_level(),
+            'level_up': level_up_messages
         }
     
     def play_with_pet(self) -> dict:
@@ -69,24 +74,31 @@ class PetService:
             return {'message': '宠物未加载', 'level_up': []}
         
         self.pet.mood = 'excited'
-        exp_gain = self.pet.add_exp(15)
+        level_up_messages = self.pet.add_exp(15)
         self.save_pet()
         
         return {
             'message': '太好玩了! 再来再来!',
-            'level_up': exp_gain
+            'mood': self.pet.mood,
+            'emoji': self.pet.get_mood_emoji(),
+            'level': self.pet.level,
+            'exp': self.pet.exp,
+            'exp_needed': self.pet.get_exp_for_next_level(),
+            'level_up': level_up_messages
         }
     
-    def pet_sleep(self):
+    def pet_sleep(self) -> dict:
         """宠物睡觉"""
         if not self.pet:
-            return
+            return {'message': '宠物未加载'}
         
         self.pet.mood = 'sleepy'
         self.save_pet()
         
         return {
-            'message': '困了... zzZ...'
+            'message': '困了... zzZ...',
+            'mood': self.pet.mood,
+            'emoji': self.pet.get_mood_emoji()
         }
     
     def is_sleeping(self) -> bool:

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 class Countdown:
@@ -37,7 +37,7 @@ class Countdown:
     def resume(self):
         """继续倒计时"""
         if self.status == "paused":
-            self.target_time = datetime.now()
+            self.target_time = datetime.now() + timedelta(seconds=self.remaining_seconds)
             self.status = "running"
     
     def reset(self, seconds: int):
