@@ -7,13 +7,13 @@ title = Clock 3
 package.name = clock3
 
 # (str) Package domain (needed for android/ios packaging)
-package.domain = com.example
+package.domain = org.test
 
 # (str) Source code where the main.py live
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,ttf,mp3,wav
+source.include_exts = py,png,jpg,kv,atlas
 
 # (str) Application versioning (method 1)
 version = 1.0.0
@@ -25,7 +25,7 @@ requirements = python3,kivy
 orientation = portrait
 
 # (list) Permissions
-android.permissions = VIBRATE,WAKE_LOCK
+android.permissions = VIBRATE
 
 # (int) Target Android API, should be as high as possible.
 android.api = 33

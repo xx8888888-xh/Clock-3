@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
 
     steps:
     - name: Checkout
@@ -17,18 +17,15 @@ jobs:
     - name: Prepare environment
       run: |
         mkdir -p assets bin
-        if [ ! -f assets/alarm.mp3 ]; then
-          touch assets/alarm.mp3
-        fi
-        if [ ! -f assets/icon.png ]; then
-          touch assets/icon.png
-        fi
+        touch assets/alarm.mp3
+        touch assets/icon.png
+        ls -la
 
     - name: Build with Buildozer
-      uses: ArtemSBulgakov/buildozer-action@v2
+      uses: ArtemSBulgakov/buildozer-action@v1
       id: buildozer
       with:
-        buildozer_version: 1.5.0
+        buildozer_version: stable
         command: android debug
         workdir: .
 
@@ -48,4 +45,5 @@ jobs:
         path: |
           buildozer.log
           bin/
+          .buildozer/android/platform/build-*/dists/clock3/build/outputs/apk/debug/*.apk
         retention-days: 7
