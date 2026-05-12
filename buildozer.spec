@@ -13,6 +13,7 @@ android.minapi = 21
 android.ndk = 25b
 android.arch = armeabi-v7a
 android.accept_sdk_license = True
+android.skip_update = False
 
 [buildozer]
 log_level = 2
