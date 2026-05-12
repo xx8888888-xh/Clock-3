@@ -14,51 +14,26 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Prepare files and directories
+    - name: Prepare files
       run: |
-        mkdir -p assets bin
+        mkdir -p assets
         touch assets/alarm.mp3
         touch assets/icon.png
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          build-essential git python3-pip python3-dev \
-          openjdk-11-jdk libssl-dev libffi-dev \
-          zlib1g-dev zip unzip autoconf libtool pkg-config
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Build with Buildozer
+      uses: kivy/buildozer-action@master
       with:
-        python-version: '3.8'
+        command: android debug
 
-    - name: Install Python packages
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install cython==0.29.37
-        python -m pip install buildozer==1.4.0 python-for-android==2023.03.13
-
-    - name: Build the APK
-      id: build
-      run: |
-        export ANDROID_HOME="$HOME/android-sdk"
-        export ANDROID_NDK_HOME="$HOME/android-ndk-r25b"
-        export PATH="$PATH:$HOME/.local/bin"
-        
-        ls -la
-        buildozer android debug 2>&1 | tee buildozer.log
-        
-    - name: Check build result
+    - name: Check build
       if: always()
       run: |
         ls -la bin/ || true
         ls -la || true
-        find . -name "*.apk" -type f 2>/dev/null || true
         
     - name: Upload APK
-      uses: actions/upload-artifact@v4
       if: success()
+      uses: actions/upload-artifact@v4
       with:
         name: clock3-apk
         path: bin/*.apk
@@ -72,5 +47,4 @@ jobs:
         path: |
           buildozer.log
           bin/
-          .buildozer/android/platform/build-*/dists/clock3/build/outputs/apk/debug/*.apk
         retention-days: 7
