@@ -13,33 +13,33 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Prepare
+    - name: Prepare directories
+      run: mkdir -p assets bin
+
+    - name: Build APK
+      id: build
       run: |
-        mkdir -p assets bin
-        touch assets/alarm.mp3
-        touch assets/icon.png
-
-    - name: Build with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: kivy/buildozer:latest
-        options: -v ${{ github.workspace }}:/home/user/clock3 -w /home/user/clock3 -u root
-        run: |
-          ls -la
-          buildozer android debug
-          echo "=== Find APK ==="
-          find . -name "*.apk" 2>/dev/null || true
-          ls -la bin/ 2>/dev/null || true
-          ls -la .buildozer/ 2>/dev/null || true
-
-    - name: Check
+        docker run --rm \
+          -v $GITHUB_WORKSPACE:/home/user/clock3 \
+          -w /home/user/clock3 \
+          -u root \
+          kivy/buildozer:latest \
+          /bin/bash -c "
+            ls -la
+            buildozer android debug
+            echo '=== Finding APK ==='
+            find . -name '*.apk' 2>/dev/null || true
+            ls -la bin 2>/dev/null || true
+            ls -la .buildozer 2>/dev/null || true
+          "
+    
+    - name: Check files
       if: always()
       run: |
         ls -la bin/ || true
         ls -la || true
-        echo "=== Finding APK ==="
-        find . -name "*.apk" 2>/dev/null || true
-        
+        find . -name "*.apk" -type f -print0 2>/dev/null | xargs -0 -I {} ls -la {} || true
+    
     - name: Upload APK
       uses: actions/upload-artifact@v4
       if: always()
@@ -47,9 +47,10 @@ jobs:
         name: clock3-apk
         path: |
           bin/*.apk
-          .buildozer/android/platform/build-*/dists/clock3/build/outputs/apk/debug/*.apk
-        
-    - name: Upload logs
+          .buildozer/android/platform/build*/dists/clock3/build/outputs/apk/debug/*.apk
+          .buildozer/android/platform/build*/dists/clock3/build/outputs/apk/release/*.apk
+    
+    - name: Upload build logs
       uses: actions/upload-artifact@v4
       if: always()
       with:
