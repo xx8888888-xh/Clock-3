@@ -7,39 +7,25 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 240
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Prepare assets and permissions
+    - name: Prepare files
       run: |
-        mkdir -p assets bin
+        mkdir -p assets
         touch assets/alarm.mp3
         touch assets/icon.png
-        ls -la
 
-    - name: Pull buildozer image
-      run: docker pull kivy/buildozer:latest
+    - name: Setup buildozer
+      uses: Nuxion/github-action-buildozer@v1
+      with:
+        command: android debug
 
-    - name: Build APK using docker
-      id: build
-      run: |
-        set -e
-        echo "Starting build..."
-        docker run --rm -v "${PWD}:/home/user/clock3" -w /home/user/clock3 \
-          -e "HOME=/home/user" \
-          -e "USER=user" \
-          kivy/buildozer bash -c "
-            ls -la
-            echo '=== Building APK ==='
-            buildozer android debug
-            ls -la bin/
-          "
-          
-    - name: List output files
+    - name: Check build
       if: always()
       run: |
         ls -la bin/ || true

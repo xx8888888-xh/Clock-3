@@ -1,20 +1,18 @@
 [app]
-
 title = Clock 3
 package.name = clock3
 package.domain = org.test
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
+source.include_exts = py
 version = 1.0.0
 requirements = python3,kivy
 orientation = portrait
-android.permissions = VIBRATE
+fullscreen = 0
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
 android.arch = armeabi-v7a
 android.accept_sdk_license = True
-fullscreen = 0
 
 [buildozer]
 log_level = 2
