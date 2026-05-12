@@ -8,42 +8,57 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Prepare environment
+    - name: Prepare assets and permissions
       run: |
         mkdir -p assets bin
         touch assets/alarm.mp3
         touch assets/icon.png
         ls -la
 
-    - name: Build with Buildozer
-      uses: ArtemSBulgakov/buildozer-action@v1
-      id: buildozer
-      with:
-        buildozer_version: stable
-        command: android debug
-        workdir: .
+    - name: Pull buildozer image
+      run: docker pull kivy/buildozer:latest
 
+    - name: Build APK using docker
+      id: build
+      run: |
+        set -e
+        echo "Starting build..."
+        docker run --rm -v "${PWD}:/home/user/clock3" -w /home/user/clock3 \
+          -e "HOME=/home/user" \
+          -e "USER=user" \
+          kivy/buildozer bash -c "
+            ls -la
+            echo '=== Building APK ==='
+            buildozer android debug
+            ls -la bin/
+          "
+          
+    - name: List output files
+      if: always()
+      run: |
+        ls -la bin/ || true
+        ls -la || true
+        
     - name: Upload APK
-      uses: actions/upload-artifact@v4
       if: success()
+      uses: actions/upload-artifact@v4
       with:
         name: clock3-apk
-        path: ${{ steps.buildozer.outputs.filename }}
+        path: bin/*.apk
         retention-days: 30
-
+        
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
       if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: build-artifacts
         path: |
           buildozer.log
           bin/
-          .buildozer/android/platform/build-*/dists/clock3/build/outputs/apk/debug/*.apk
         retention-days: 7
