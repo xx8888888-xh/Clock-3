@@ -29,15 +29,16 @@ jobs:
           buildozer android debug
           echo "=== Find APK ==="
           find . -name "*.apk" 2>/dev/null || true
+          echo "=== Copy APK to bin ==="
+          find . -name "*.apk" -exec cp {} bin/ \; 2>/dev/null || true
+          ls -la bin/ || true
 
     - name: Check
       if: always()
       run: |
         ls -la bin/ || true
-        ls -la || true
-        echo "=== Finding APK ==="
         find . -name "*.apk" 2>/dev/null || true
-        
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       if: always()
@@ -45,10 +46,8 @@ jobs:
         name: clock3-apk
         path: |
           bin/*.apk
-          .buildozer/android/platform/build-*/dists/clock3/build/outputs/apk/debug/*.apk
-          .buildozer/android/platform/build-*/dists/clock3/build/outputs/apk/release/*.apk
-        
-    - name: Upload logs
+
+    - name: Upload build log
       uses: actions/upload-artifact@v4
       if: always()
       with:
