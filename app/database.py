@@ -53,6 +53,8 @@ class Database:
                         return Path(context.getFilesDir().getAbsolutePath()) / '.clock3'
                     except Exception as e:
                         self.logger.warning(f"无法通过 jnius 获取 Android 目录: {e}")
+            except ImportError:
+                pass
             
             return Path.home() / '.clock3'
         except Exception as e:

@@ -61,12 +61,12 @@ class Config:
                 if platform == 'android':
                     try:
                         from jnius import autoclass
-                        Environment = autoclass('android.os.Environment')
-                        Context = autoclass('android.content.Context')
                         context = autoclass('org.kivy.android.PythonActivity').mActivity
                         return Path(context.getFilesDir().getAbsolutePath()) / '.clock3'
                     except Exception as e:
                         self.logger.warning(f"无法通过 jnius 获取 Android 目录: {e}")
+            except ImportError:
+                pass
             
             # 默认使用主目录
             return Path.home() / '.clock3'
