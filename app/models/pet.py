@@ -1,7 +1,6 @@
 import random
 from datetime import datetime
 from typing import Optional
-import random
 
 class Pet:
     """宠物数据模型"""
@@ -80,7 +79,7 @@ class Pet:
         """检查是否在睡眠时间"""
         current_hour = datetime.now().hour
         # 睡眠时间: 22:00 - 07:00
-        return (22 <= current_hour <= 23) or (0 <= current_hour < 7)
+        return current_hour >= 22 or current_hour < 7
     
     def to_dict(self) -> dict:
         """转换为字典"""
