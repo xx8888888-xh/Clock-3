@@ -41,8 +41,9 @@ class Pet:
         """添加经验值"""
         self.exp += amount
         messages = []
-        while self.exp >= self.get_exp_for_next_level():
-            self.exp -= self.get_exp_for_next_level()
+        
+        while self.exp >= self.level * 100:
+            self.exp -= self.level * 100
             self.level += 1
             messages.append(f"🎉 恭喜升级到 {self.level} 级!")
         

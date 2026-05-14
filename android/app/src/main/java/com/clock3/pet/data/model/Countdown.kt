@@ -18,13 +18,11 @@ data class Countdown(
     }
 
     fun updateRemaining(): Int {
-        if (status == CountdownStatus.RUNNING) {
-            remainingSeconds = Duration.between(LocalDateTime.now(), targetTime).seconds.toInt()
-            if (remainingSeconds <= 0) {
-                remainingSeconds = 0
-            }
+        return if (status == CountdownStatus.RUNNING) {
+            Duration.between(LocalDateTime.now(), targetTime).seconds.toInt().coerceAtLeast(0)
+        } else {
+            remainingSeconds
         }
-        return remainingSeconds
     }
 
     fun getFormattedTime(): String {
@@ -40,8 +38,19 @@ data class Countdown(
         }
     }
 
-    fun pause() {
-        remainingSeconds = updateRemaining()
+    fun pause(): Countdown {
+        val remaining = Duration.between(LocalDateTime.now(), targetTime).seconds.toInt().coerceAtLeast(0)
+        return this.copy(
+            status = CountdownStatus.PAUSED,
+            remainingSeconds = remaining
+        )
+    }
+
+    fun resume(): Countdown {
+        return this.copy(
+            targetTime = LocalDateTime.now().plusSeconds(remainingSeconds.toLong()),
+            status = CountdownStatus.RUNNING
+        )
     }
 
     fun toEntity(): CountdownEntity {
