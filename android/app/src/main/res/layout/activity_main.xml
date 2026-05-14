@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="🐾 Clock 3"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:paddingVertical="16dp"/>
+
+        <TextView
+            android:id="@+id/currentTimeText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="00:00:00"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"/>
+
+        <TextView
+            android:id="@+id/nextAlarmText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="下一个: 暂无"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:paddingVertical="8dp"/>
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="宠物状态"
+            android:textSize="16sp"
+            android:textColor="@color/text_secondary"
+            android:paddingBottom="16dp"/>
+
+        <LinearLayout
+            android:id="@+id/menuContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/card_background"
+            android:padding="16dp"
+            android:elevation="4dp">
+
+            <Button
+                android:id="@+id/btnAlarms"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⏰ 闹钟列表"
+                android:layout_marginVertical="4dp"
+                android:backgroundTint="@color/primary"/>
+
+            <Button
+                android:id="@+id/btnAddAlarm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="➕ 新建闹钟"
+                android:layout_marginVertical="4dp"
+                android:backgroundTint="@color/primary"/>
+
+            <Button
+                android:id="@+id/btnCountdown"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⏱️ 倒计时"
+                android:layout_marginVertical="4dp"
+                android:backgroundTint="@color/primary"/>
+
+            <Button
+                android:id="@+id/btnPetStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🐶 宠物状态"
+                android:layout_marginVertical="4dp"
+                android:backgroundTint="@color/primary"/>
+
+            <Button
+                android:id="@+id/btnSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⚙️ 设置"
+                android:layout_marginVertical="4dp"
+                android:backgroundTint="@color/primary"/>
+
+            <Button
+                android:id="@+id/btnFloatingPet"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🐾 开启悬浮球"
+                android:layout_marginVertical="4dp"
+                android:backgroundTint="@color/accent"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider"
+                android:layout_marginVertical="8dp"/>
+
+            <Button
+                android:id="@+id/btnExport"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📤 导出数据"
+                android:layout_marginVertical="4dp"
+                android:backgroundTint="@color/text_secondary"/>
+
+            <Button
+                android:id="@+id/btnImport"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📥 导入数据"
+                android:layout_marginVertical="4dp"
+                android:backgroundTint="@color/text_secondary"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
