@@ -1,120 +1,194 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/background"
-    android:padding="16dp">
-
-    <Button
-        android:id="@+id/backButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="← 返回"
-        android:backgroundTint="@color/text_secondary"/>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="⏱️ 倒计时"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:gravity="center"
-        android:paddingVertical="16dp"/>
-
-    <TextView
-        android:id="@+id/countdownText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="00:00"
-        android:textSize="64sp"
-        android:textStyle="bold"
-        android:textColor="@color/primary"
-        android:gravity="center"
-        android:paddingVertical="32dp"/>
+    android:fillViewport="true"
+    android:background="@color/background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/card_background"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp">
-
-        <EditText
-            android:id="@+id/labelInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="标签"
-            android:layout_marginBottom="8dp"/>
+        android:padding="32dp">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <EditText
-                android:id="@+id/minuteInput"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="分"
-                android:inputType="number"
-                android:gravity="center"/>
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/card_button_secondary"
+            android:paddingHorizontal="20dp"
+            android:clickable="true"
+            android:focusable="true">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text=" : "
-                android:textSize="24sp"/>
+                android:text="@string/back"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"/>
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/countdown"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:paddingVertical="24dp"/>
+
+        <TextView
+            android:id="@+id/countdownText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/countdown_zero_time"
+            android:textSize="72sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:letterSpacing="0.08"
+            android:paddingVertical="32dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/card_background"
+            android:padding="24dp"
+            android:layout_marginBottom="24dp">
 
             <EditText
-                android:id="@+id/secondInput"
-                android:layout_width="0dp"
+                android:id="@+id/labelInput"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/label_hint"
+                android:background="@drawable/edit_text_background"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp"
+                android:textSize="16sp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/minuteInput"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/countdown_minutes"
+                    android:inputType="number"
+                    android:gravity="center"
+                    android:background="@drawable/edit_text_background"
+                    android:padding="16dp"
+                    android:textSize="18sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/time_separator"
+                    android:textSize="32sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_gravity="center"/>
+
+                <EditText
+                    android:id="@+id/secondInput"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/countdown_seconds"
+                    android:inputType="number"
+                    android:gravity="center"
+                    android:background="@drawable/edit_text_background"
+                    android:padding="16dp"
+                    android:textSize="18sp"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <LinearLayout
+                android:id="@+id/startButton"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
                 android:layout_weight="1"
-                android:hint="秒"
-                android:inputType="number"
-                android:gravity="center"/>
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_margin="8dp"
+                android:background="@drawable/card_button_secondary"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/startButtonText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/start"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"/>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/pauseButton"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_margin="8dp"
+                android:background="@drawable/card_button_secondary"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/pauseButtonText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pause"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"/>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/resetButton"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_margin="8dp"
+                android:background="@drawable/card_button_secondary"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/reset"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_secondary"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 
     </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
-
-        <Button
-            android:id="@+id/startButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="▶️ 开始"
-            android:backgroundTint="@color/success"
-            android:layout_margin="4dp"/>
-
-        <Button
-            android:id="@+id/pauseButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="⏸️ 暂停"
-            android:backgroundTint="@color/warning"
-            android:layout_margin="4dp"/>
-
-        <Button
-            android:id="@+id/resetButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="🔄 重置"
-            android:backgroundTint="@color/text_secondary"
-            android:layout_margin="4dp"/>
-
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

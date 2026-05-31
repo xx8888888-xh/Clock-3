@@ -18,12 +18,6 @@ interface PetDao {
     @Query("UPDATE pet_data SET mood = :mood WHERE id = 1")
     suspend fun updateMood(mood: String)
 
-    @Query("UPDATE pet_data SET level = :level, exp = :exp WHERE id = 1")
-    suspend fun updateLevelAndExp(level: Int, exp: Int)
-
-    @Query("UPDATE pet_data SET totalInteractions = totalInteractions + 1, lastInteraction = :timestamp WHERE id = 1")
-    suspend fun incrementInteractions(timestamp: String)
-
-    @Query("UPDATE pet_data SET name = :name WHERE id = 1")
-    suspend fun updateName(name: String)
+    @Query("UPDATE pet_data SET level = :newLevel, exp = :newExp WHERE id = 1 AND level = :expectedLevel AND exp = :expectedExp")
+    suspend fun atomicUpdateExp(newLevel: Int, newExp: Int, expectedLevel: Int, expectedExp: Int): Int
 }

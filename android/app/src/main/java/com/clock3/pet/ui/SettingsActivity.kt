@@ -1,16 +1,34 @@
 package com.clock3.pet.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.*
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
+import androidx.lifecycle.lifecycleScope
 import com.clock3.pet.R
 import com.clock3.pet.data.repository.Clock3Repository
 import com.clock3.pet.service.FloatingPetService
+import com.clock3.pet.utils.AppLog
+import com.clock3.pet.utils.CryptoUtils
+import com.clock3.pet.utils.ThemeManager
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var repository: Clock3Repository
+    private val gson = Gson()
+    private lateinit var importFileLauncher: ActivityResultLauncher<Intent>
 
     private lateinit var petSizeSlider: SeekBar
     private lateinit var petSizeValue: TextView
@@ -21,15 +39,33 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var maxSnoozeCountSlider: SeekBar
     private lateinit var maxSnoozeCountValue: TextView
 
-    private lateinit var vibrationSwitch: Switch
-    private lateinit var soundSwitch: Switch
-    private lateinit var sleepModeSwitch: Switch
+    private lateinit var vibrationSwitch: SwitchCompat
+    private lateinit var soundSwitch: SwitchCompat
+    private lateinit var sleepModeSwitch: SwitchCompat
+
+    private val EXPORT_PASSWORD = CryptoUtils.getExportPassword()
+    private var isLoadingSettings = false
+
+    companion object {
+        private const val TAG = "SettingsActivity"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemeManager.applyTheme(this, ThemeManager.getCurrentTheme(this))
         setContentView(R.layout.activity_settings)
 
         repository = Clock3Repository(this)
+
+        importFileLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK) {
+                result.data?.data?.let { uri ->
+                    importFromUri(uri)
+                }
+            }
+        }
 
         initViews()
         loadSettings()
@@ -50,38 +86,45 @@ class SettingsActivity : AppCompatActivity() {
         soundSwitch = findViewById(R.id.soundSwitch)
         sleepModeSwitch = findViewById(R.id.sleepModeSwitch)
 
-        findViewById<Button>(R.id.backButton).setOnClickListener { finish() }
-        findViewById<Button>(R.id.resetButton).setOnClickListener { resetSettings() }
+        findViewById<ImageButton>(R.id.backButton).setOnClickListener { finish() }
+        findViewById<LinearLayout>(R.id.resetButton).setOnClickListener { resetSettings() }
+        findViewById<LinearLayout>(R.id.exportButton).setOnClickListener { exportData() }
+        findViewById<LinearLayout>(R.id.importButton).setOnClickListener { importData() }
     }
 
     private fun loadSettings() {
-        val petSize = repository.getConfig("pet_size", 100) as Int
-        val petOpacity = repository.getConfig("pet_opacity", 1.0f) as Float
-        val snoozeDuration = repository.getConfig("snooze_duration", 5) as Int
-        val maxSnoozeCount = repository.getConfig("max_snooze_count", 3) as Int
-        val vibrationEnabled = repository.getConfig("vibration_enabled", true) as Boolean
-        val soundEnabled = repository.getConfig("sound_enabled", true) as Boolean
-        val sleepModeEnabled = repository.getConfig("sleep_mode_enabled", true) as Boolean
+        isLoadingSettings = true
+        val petSize = (repository.getConfig("pet_size", 100) as? Number)?.toInt() ?: 100
+        val petOpacity = (repository.getConfig("pet_opacity", 1.0f) as? Number)?.toFloat() ?: 1.0f
+        val snoozeDuration = (repository.getConfig("snooze_duration", 5) as? Number)?.toInt() ?: 5
+        val maxSnoozeCount = (repository.getConfig("max_snooze_count", 3) as? Number)?.toInt() ?: 3
+        val vibrationEnabled = repository.getConfig("vibration_enabled", true) as? Boolean ?: true
+        val soundEnabled = repository.getConfig("sound_enabled", true) as? Boolean ?: true
+        val sleepModeEnabled = repository.getConfig("sleep_mode_enabled", true) as? Boolean ?: true
 
         petSizeSlider.progress = petSize
-        petSizeValue.text = "$petSize"
+        petSizeValue.text = petSize.toString()
         petOpacitySlider.progress = (petOpacity * 100).toInt()
-        petOpacityValue.text = "${(petOpacity * 100).toInt()}%"
+        petOpacityValue.text = getString(R.string.settings_percent_format, (petOpacity * 100).toInt())
         snoozeDurationSlider.progress = snoozeDuration
-        snoozeDurationValue.text = "$snoozeDuration 分钟"
+        snoozeDurationValue.text = getString(R.string.settings_minutes_format, snoozeDuration)
         maxSnoozeCountSlider.progress = maxSnoozeCount
-        maxSnoozeCountValue.text = "$maxSnoozeCount 次"
+        maxSnoozeCountValue.text = getString(R.string.settings_count_format, maxSnoozeCount)
 
         vibrationSwitch.isChecked = vibrationEnabled
         soundSwitch.isChecked = soundEnabled
         sleepModeSwitch.isChecked = sleepModeEnabled
+        isLoadingSettings = false
     }
 
     private fun setupListeners() {
         petSizeSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                petSizeValue.text = "$progress"
-                repository.setConfig("pet_size", progress)
+                petSizeValue.text = progress.toString()
+                if (!isLoadingSettings && fromUser) {
+                    repository.setConfig("pet_size", progress)
+                    FloatingPetService.notifySettingsChanged()
+                }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
@@ -90,8 +133,11 @@ class SettingsActivity : AppCompatActivity() {
         petOpacitySlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val opacity = progress / 100f
-                petOpacityValue.text = "$progress%"
-                repository.setConfig("pet_opacity", opacity)
+                petOpacityValue.text = getString(R.string.settings_percent_format, progress)
+                if (!isLoadingSettings && fromUser) {
+                    repository.setConfig("pet_opacity", opacity)
+                    FloatingPetService.notifySettingsChanged()
+                }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
@@ -99,8 +145,10 @@ class SettingsActivity : AppCompatActivity() {
 
         snoozeDurationSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                snoozeDurationValue.text = "$progress 分钟"
-                repository.setConfig("snooze_duration", progress)
+                snoozeDurationValue.text = getString(R.string.settings_minutes_format, progress)
+                if (!isLoadingSettings && fromUser) {
+                    repository.setConfig("snooze_duration", progress)
+                }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
@@ -108,31 +156,39 @@ class SettingsActivity : AppCompatActivity() {
 
         maxSnoozeCountSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                maxSnoozeCountValue.text = "$progress 次"
-                repository.setConfig("max_snooze_count", progress)
+                maxSnoozeCountValue.text = getString(R.string.settings_count_format, progress)
+                if (!isLoadingSettings && fromUser) {
+                    repository.setConfig("max_snooze_count", progress)
+                }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
         vibrationSwitch.setOnCheckedChangeListener { _, isChecked ->
-            repository.setConfig("vibration_enabled", isChecked)
+            if (!isLoadingSettings) {
+                repository.setConfig("vibration_enabled", isChecked)
+            }
         }
 
         soundSwitch.setOnCheckedChangeListener { _, isChecked ->
-            repository.setConfig("sound_enabled", isChecked)
+            if (!isLoadingSettings) {
+                repository.setConfig("sound_enabled", isChecked)
+            }
         }
 
         sleepModeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            repository.setConfig("sleep_mode_enabled", isChecked)
+            if (!isLoadingSettings) {
+                repository.setConfig("sleep_mode_enabled", isChecked)
+            }
         }
     }
 
     private fun resetSettings() {
         AlertDialog.Builder(this)
-            .setTitle("恢复默认设置")
-            .setMessage("确定要恢复所有设置为默认值吗？")
-            .setPositiveButton("确定") { _, _ ->
+            .setTitle(getString(R.string.settings_reset_title))
+            .setMessage(getString(R.string.settings_reset_confirm))
+            .setPositiveButton(getString(R.string.confirm)) { _, _ ->
                 repository.setConfig("pet_size", 100)
                 repository.setConfig("pet_opacity", 1.0f)
                 repository.setConfig("snooze_duration", 5)
@@ -141,9 +197,88 @@ class SettingsActivity : AppCompatActivity() {
                 repository.setConfig("sound_enabled", true)
                 repository.setConfig("sleep_mode_enabled", true)
                 loadSettings()
-                Toast.makeText(this, "已恢复默认设置", Toast.LENGTH_SHORT).show()
+                FloatingPetService.notifySettingsChanged()
+                Toast.makeText(this, getString(R.string.settings_reset_done), Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
+    }
+
+    private fun importData() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.type = "application/json"
+        importFileLauncher.launch(Intent.createChooser(intent, getString(R.string.settings_choose_backup)))
+    }
+
+    private fun exportData() {
+        lifecycleScope.launch {
+            try {
+                val data = repository.exportData()
+                val json = gson.toJson(data)
+
+                withContext(Dispatchers.IO) {
+                    val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                    val fileName = "clock3_backup_$timestamp.json"
+                    val file = File(filesDir, fileName)
+                    file.writeText(CryptoUtils.encrypt(json, EXPORT_PASSWORD), Charsets.UTF_8)
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@SettingsActivity,
+                            getString(R.string.settings_export_success, fileName),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Export failed", e)
+                Toast.makeText(this@SettingsActivity, getString(R.string.settings_export_failed, e.message), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun importFromUri(uri: Uri) {
+        lifecycleScope.launch {
+            try {
+                val json = withContext(Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        input.bufferedReader().use { it.readText() }
+                    }
+                } ?: throw Exception(getString(R.string.settings_cannot_read_file))
+
+                val decryptedJson = withContext(Dispatchers.Default) {
+                    CryptoUtils.decrypt(json, EXPORT_PASSWORD) ?: json
+                }
+                val data: Map<String, Any?> = withContext(Dispatchers.Default) {
+                    val type = object : TypeToken<Map<String, Any?>>() {}.type
+                    gson.fromJson<Map<String, Any?>>(decryptedJson, type)
+                }
+
+                AlertDialog.Builder(this@SettingsActivity)
+                    .setTitle(getString(R.string.settings_import_title))
+                    .setMessage(getString(R.string.settings_import_confirm))
+                    .setPositiveButton(getString(R.string.confirm)) { _, _ ->
+                        lifecycleScope.launch {
+                            try {
+                                val success = repository.importData(data)
+                                if (success) {
+                                    Toast.makeText(this@SettingsActivity, getString(R.string.settings_import_success), Toast.LENGTH_SHORT).show()
+                                    FloatingPetService.notifySettingsChanged()
+                                } else {
+                                    Toast.makeText(this@SettingsActivity, getString(R.string.settings_import_failed), Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Import processing failed", e)
+                                Toast.makeText(this@SettingsActivity, getString(R.string.settings_import_error, e.message), Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                    .setNegativeButton(getString(R.string.cancel), null)
+                    .show()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Import read failed", e)
+                Toast.makeText(this@SettingsActivity, getString(R.string.settings_import_error, e.message), Toast.LENGTH_LONG).show()
+            }
+        }
     }
 }

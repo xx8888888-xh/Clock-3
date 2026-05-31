@@ -1,28 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="100dp"
-    android:layout_height="100dp"
-    android:background="@drawable/pet_background"
-    android:padding="8dp">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/floatingPetContainer"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center">
 
-    <ImageView
-        android:id="@+id/petImage"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:contentDescription="宠物"
-        android:scaleType="centerInside"
-        android:src="@drawable/ic_pet_default" />
+    <FrameLayout
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:background="@drawable/pet_circle_background">
 
-    <TextView
-        android:id="@+id/petStatus"
+        <ImageView
+            android:id="@+id/petImage"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_gravity="center"
+            android:src="@drawable/pet_happy"
+            android:contentDescription="@string/content_desc_pet_floating"
+            android:scaleType="centerCrop"/>
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/pomodoroStatusLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:background="#80000000"
-        android:paddingHorizontal="4dp"
-        android:paddingVertical="2dp"
-        android:text="😊"
-        android:textColor="@color/white"
-        android:textSize="12sp" />
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/card_background"
+        android:padding="6dp"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
 
-</FrameLayout>
+        <TextView
+            android:id="@+id/pomodoroStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/floating_pet_focusing"
+            android:textSize="10sp"
+            android:textColor="@color/text_secondary"
+            android:maxLines="1"/>
+
+        <TextView
+            android:id="@+id/pomodoroTimeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pomodoro_default_time"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:maxLines="1"/>
+
+    </LinearLayout>
+
+</LinearLayout>

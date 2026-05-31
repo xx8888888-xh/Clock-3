@@ -1,6 +1,7 @@
 package com.clock3.pet.data.model
 
 import com.clock3.pet.data.entity.PetEntity
+import com.clock3.pet.utils.ExpCalculator
 import java.time.LocalDateTime
 import java.time.LocalTime
 import kotlin.random.Random
@@ -14,32 +15,35 @@ data class Pet(
     val lastInteraction: LocalDateTime? = null,
     val totalInteractions: Int = 0
 ) {
-    enum class PetMood(val emoji: String, val colorHex: String) {
-        HAPPY("😊", "#FFD54F"),
-        SAD("😢", "#90CAF9"),
-        SLEEPY("😴", "#CE93D8"),
-        EXCITED("🤩", "#FF8A65"),
-        HUNGRY("🤤", "#A5D6A7"),
-        BORED("😐", "#B0BEC5");
+    enum class PetMood(val emoji: String) {
+        HAPPY("😊"),
+        SAD("😢"),
+        SLEEPY("😴"),
+        EXCITED("🤩"),
+        HUNGRY("🤤"),
+        BORED("😐");
 
         companion object {
+            private val RANDOMABLE_MOODS = entries.filter { it != SLEEPY }
+
             fun random(): PetMood {
-                return entries.filter { it != SLEEPY }.random()
+                return RANDOMABLE_MOODS.random()
             }
         }
     }
 
     fun getExpForNextLevel(): Int {
-        return level * 100
+        return level * ExpCalculator.EXP_PER_LEVEL
     }
 
     fun addExp(amount: Int): Pair<Pet, List<String>> {
-        var newExp = exp + amount
+        val safeAmount = amount.coerceAtLeast(0)
+        var newExp = exp + safeAmount
         var newLevel = level
         val messages = mutableListOf<String>()
 
-        while (newExp >= newLevel * 100) {
-            newExp -= newLevel * 100
+        while (newExp >= newLevel * ExpCalculator.EXP_PER_LEVEL) {
+            newExp -= newLevel * ExpCalculator.EXP_PER_LEVEL
             newLevel++
             messages.add("🎉 恭喜升级到 $newLevel 级!")
         }
@@ -48,7 +52,7 @@ data class Pet(
     }
 
     fun interact(): Pair<Pet, List<String>> {
-        val newExp = 5 + (level * 2)
+        val newExp = ExpCalculator.calculateInteractExp(level)
         val (updatedPet, levelUpMessages) = addExp(newExp)
         val newMood = PetMood.random()
         return Pair(
@@ -75,7 +79,7 @@ data class Pet(
 
     fun isSleeping(): Boolean {
         val hour = LocalTime.now().hour
-        return hour >= 22 || hour < 7
+        return hour >= SLEEP_START_HOUR || hour < SLEEP_END_HOUR
     }
 
     fun toEntity(): PetEntity {
@@ -90,16 +94,55 @@ data class Pet(
         )
     }
 
+    fun toExportMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "mood" to mood.name,
+            "level" to level,
+            "exp" to exp,
+            "name" to name,
+            "lastInteraction" to (lastInteraction?.toString() ?: ""),
+            "totalInteractions" to totalInteractions
+        )
+    }
+
     companion object {
+        private const val SLEEP_START_HOUR = 22
+        private const val SLEEP_END_HOUR = 7
+
         fun fromEntity(entity: PetEntity): Pet {
             return Pet(
                 id = entity.id,
                 mood = PetMood.entries.find { it.name.equals(entity.mood, ignoreCase = true) } ?: PetMood.HAPPY,
-                level = entity.level,
-                exp = entity.exp,
+                level = entity.level.coerceAtLeast(1),
+                exp = entity.exp.coerceAtLeast(0),
                 name = entity.name,
                 lastInteraction = entity.lastInteraction?.let { LocalDateTime.parse(it) },
-                totalInteractions = entity.totalInteractions
+                totalInteractions = entity.totalInteractions.coerceAtLeast(0)
+            )
+        }
+
+        fun fromExportMap(map: Map<*, *>): Pet {
+            return Pet(
+                id = 1,
+                mood = (map["mood"] as? String)?.let {
+                    try {
+                        PetMood.valueOf(it.uppercase())
+                    } catch (e: Exception) {
+                        PetMood.HAPPY
+                    }
+                } ?: PetMood.HAPPY,
+                level = ((map["level"] as? Number)?.toInt() ?: 1).coerceAtLeast(1),
+                exp = ((map["exp"] as? Number)?.toInt() ?: 0).coerceAtLeast(0),
+                name = (map["name"] as? String) ?: "小宠物",
+                lastInteraction = (map["lastInteraction"] as? String)?.let {
+                    try {
+                        if (it.isNotEmpty()) LocalDateTime.parse(it) else null
+                    } catch (e: Exception) {
+                        null
+                    }
+                },
+                totalInteractions = ((map["totalInteractions"] as? Number)?.toInt() ?: 0).coerceAtLeast(0)
             )
         }
     }

@@ -1,57 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Clock 3</string>
-    <string name="app_description">智能桌面宠物闹钟</string>
 
-    <!-- Main Menu -->
-    <string name="menu_alarms">⏰ 闹钟列表</string>
-    <string name="menu_add_alarm">➕ 新建闹钟</string>
-    <string name="menu_countdown">⏱️ 倒计时</string>
-    <string name="menu_pet_status">🐶 宠物状态</string>
-    <string name="menu_settings">⚙️ 设置</string>
-    <string name="menu_export">📤 导出数据</string>
-    <string name="menu_import">📥 导入数据</string>
-    <string name="menu_close">❌ 关闭</string>
-
-    <!-- Alarm -->
     <string name="alarm_label">闹钟名称</string>
     <string name="alarm_content">提醒内容</string>
-    <string name="alarm_time">时间</string>
-    <string name="alarm_repeat">重复</string>
-    <string name="alarm_save">💾 保存</string>
-    <string name="alarm_delete">🗑️ 删除</string>
-    <string name="alarm_snooze">💤 贪睡</string>
-    <string name="alarm_dismiss">✓ 关闭</string>
-    <string name="alarm_no_alarms">暂无闹钟</string>
-    <string name="alarm_next">下一个</string>
+    <string name="alarm_delete">删除</string>
+    <string name="alarm_default_label">闹钟</string>
+    <string name="alarm_time_invalid">时间格式不正确</string>
+    <string name="alarm_saved">闹钟已保存</string>
+    <string name="alarm_deleted">闹钟已删除</string>
+    <string name="alarm_add_title">新建闹钟</string>
+    <string name="alarm_delete_title">删除闹钟</string>
+    <string name="alarm_delete_confirm">确定要删除这个闹钟吗？</string>
+    <string name="alarm_custom_repeat_title">选择重复日期</string>
 
-    <!-- Repeat Types -->
-    <string name="repeat_once">一次</string>
-    <string name="repeat_daily">每天</string>
-    <string name="repeat_workdays">工作日</string>
-    <string name="repeat_weekend">周末</string>
-    <string name="repeat_custom">自定义</string>
-
-    <!-- Countdown -->
-    <string name="countdown_title">⏱️ 倒计时</string>
     <string name="countdown_start">▶️ 开始</string>
     <string name="countdown_pause">⏸️ 暂停</string>
     <string name="countdown_resume">▶️ 继续</string>
-    <string name="countdown_reset">🔄 重置</string>
-    <string name="countdown_complete">🎉 完成!</string>
     <string name="countdown_minutes">分</string>
     <string name="countdown_seconds">秒</string>
+    <string name="countdown_default_label">倒计时</string>
+    <string name="countdown_invalid_time">请输入有效的时间</string>
+    <string name="countdown_too_long">倒计时不能超过24小时</string>
+    <string name="countdown_running">计时中</string>
+    <string name="countdown_complete_msg">%s 完成!</string>
 
-    <!-- Pet -->
     <string name="pet_name">小宠物</string>
-    <string name="pet_mood">心情</string>
-    <string name="pet_level">等级</string>
-    <string name="pet_exp">经验</string>
-    <string name="pet_interact">😊 互动</string>
-    <string name="pet_feed">🍖 喂食</string>
-    <string name="pet_play">🎮 玩耍</string>
+    <string name="pet_not_loaded">宠物未加载</string>
+    <string name="pet_feed_msg">好吃! 谢谢喂我~</string>
+    <string name="pet_play_msg">太好玩了! 再来再来!</string>
+    <string name="pet_sleep_msg">困了... zzZ...</string>
 
-    <!-- Pet Moods -->
     <string name="mood_happy">开心</string>
     <string name="mood_sad">难过</string>
     <string name="mood_sleepy">困倦</string>
@@ -59,31 +38,50 @@
     <string name="mood_hungry">饥饿</string>
     <string name="mood_bored">无聊</string>
 
-    <!-- Settings -->
-    <string name="settings_title">⚙️ 设置</string>
     <string name="settings_pet_size">宠物大小</string>
     <string name="settings_pet_opacity">宠物透明度</string>
     <string name="settings_snooze_duration">贪睡时长(分钟)</string>
     <string name="settings_max_snooze_count">最大贪睡次数</string>
-    <string name="settings_notification_duration">通知显示时间(秒)</string>
     <string name="settings_vibration">振动提醒</string>
     <string name="settings_sound">声音提醒</string>
     <string name="settings_sleep_mode">睡眠模式</string>
-    <string name="settings_reset">🔄 恢复默认设置</string>
+    <string name="settings_reset_title">恢复默认设置</string>
+    <string name="settings_reset_confirm">确定要恢复所有设置为默认值吗？</string>
+    <string name="settings_reset_done">已恢复默认设置</string>
+    <string name="settings_minutes_format">%d 分钟</string>
+    <string name="settings_count_format">%d 次</string>
+    <string name="settings_percent_format">%d%%</string>
+    <string name="pet_mood_default">心情: 开心</string>
+    <string name="pet_level_default">等级: 1</string>
+    <string name="pet_exp_default">经验: 0/100</string>
+    <string name="pet_interactions_default">交互次数: 0</string>
+    <string name="settings_pet_size_default">100</string>
+    <string name="settings_pet_opacity_default">100%</string>
+    <string name="settings_snooze_duration_default">5 分钟</string>
+    <string name="settings_max_snooze_count_default">3 次</string>
+    <string name="zero">0</string>
+    <string name="settings_export_success">备份成功！文件名: %s</string>
+    <string name="settings_export_failed">备份失败: %s</string>
+    <string name="settings_import_title">确认导入</string>
+    <string name="settings_import_confirm">导入将覆盖当前所有数据，确定继续吗？</string>
+    <string name="settings_import_success">导入成功！</string>
+    <string name="settings_import_failed">导入失败！</string>
+    <string name="settings_import_error">导入失败: %s</string>
+    <string name="settings_choose_backup">选择备份文件</string>
+    <string name="settings_cannot_read_file">无法读取文件</string>
 
-    <!-- Common -->
-    <string name="back">← 返回</string>
+    <string name="back">返回</string>
     <string name="confirm">确定</string>
     <string name="cancel">取消</string>
-    <string name="success">成功</string>
-    <string name="error">错误</string>
-    <string name="export_success">数据已导出到 clock3_backup.json</string>
-    <string name="import_success">导入成功!</string>
 
-    <!-- Notifications -->
     <string name="notification_channel_alarm">闹钟提醒</string>
     <string name="notification_channel_countdown">倒计时提醒</string>
     <string name="notification_channel_service">悬浮球服务</string>
+    <string name="notification_channel_general">通用通知</string>
+    <string name="notification_channel_alarm_desc">闹钟提醒通知</string>
+    <string name="notification_channel_general_desc">通用通知</string>
+    <string name="notification_channel_countdown_desc">倒计时提醒通知</string>
+    <string name="notification_channel_service_desc">悬浮球服务通知</string>
     <string name="notification_alarm_title">⏰ 闹钟: %s</string>
     <string name="notification_alarm_text">时间到了!</string>
     <string name="notification_countdown_title">⏱️ 倒计时: %s</string>
@@ -91,9 +89,151 @@
     <string name="notification_service_title">Clock 3</string>
     <string name="notification_service_text">悬浮球正在运行</string>
 
-    <!-- Permission -->
     <string name="permission_notification">通知权限</string>
-    <string name="permission_overlay">悬浮窗权限</string>
-    <string name="permission_alarm">闹钟权限</string>
-    <string name="permission_battery">电池优化</string>
+    <string name="permission_denied">部分权限被拒绝，功能可能受限</string>
+    <string name="permission_overlay_required">需要悬浮窗权限才能显示宠物</string>
+
+    <string name="pomodoro_paused">已暂停</string>
+    <string name="pomodoro_break">休息中</string>
+    <string name="pomodoro_focusing">专注中</string>
+    <string name="pomodoro_break_time">休息一下</string>
+    <string name="pomodoro_exp_gained">太棒了！获得 %d 经验</string>
+    <string name="pomodoro_break_ticket">使用休息券 (%d分钟)</string>
+    <string name="pomodoro_no_break_ticket">没有休息券可用</string>
+    <string name="pomodoro_use_break_ticket_title">使用休息券</string>
+    <string name="pomodoro_use_break_ticket_msg">使用休息券增加休息时间？</string>
+    <string name="pomodoro_use_10min">使用10分钟</string>
+    <string name="pomodoro_used_break_ticket">已使用10分钟休息券</string>
+    <string name="pomodoro_skip_title">跳过当前计时</string>
+    <string name="pomodoro_skip_confirm">确定要跳过当前的%s吗？</string>
+    <string name="pomodoro_break_phase">休息</string>
+    <string name="pomodoro_focus_phase">专注</string>
+    <string name="pomodoro_break_alert_title">休息时间</string>
+    <string name="pomodoro_break_alert_msg">好棒！休息%d分钟吧~</string>
+    <string name="pomodoro_start_break">开始休息</string>
+    <string name="pomodoro_save_config_title">保存配置</string>
+    <string name="pomodoro_save_config_msg">是否保存当前设置为下次使用？</string>
+    <string name="pomodoro_config_saved">配置已保存</string>
+    <string name="pomodoro_settings_title">番茄钟设置</string>
+    <string name="pomodoro_focus_duration">专注时长 (%d分钟)</string>
+    <string name="pomodoro_break_duration">休息时长 (%d分钟)</string>
+    <string name="pomodoro_auto_break">自动开始休息 (%s)</string>
+    <string name="pomodoro_auto_break_on">开启</string>
+    <string name="pomodoro_auto_break_off">关闭</string>
+    <string name="pomodoro_select_focus_title">选择专注时长</string>
+    <string name="pomodoro_focus_set">专注时长已设为%d分钟</string>
+    <string name="pomodoro_select_break_title">选择休息时长</string>
+    <string name="pomodoro_break_set">休息时长已设为%d分钟</string>
+
+    <string name="shop_tab_all">全部</string>
+    <string name="shop_tab_themes">主题</string>
+    <string name="shop_tab_breaks">休息券</string>
+    <string name="shop_tab_rewards">奖励</string>
+    <string name="shop_already_owned">已拥有该物品</string>
+    <string name="shop_not_enough_exp">经验不足，需要 %d 经验</string>
+    <string name="shop_purchase_success">兑换成功！%s</string>
+    <string name="shop_purchase_failed">兑换失败</string>
+    <string name="shop_apply_theme">应用 %s</string>
+    <string name="shop_use_default_theme">使用默认主题</string>
+    <string name="shop_theme_applied">已应用 %s</string>
+    <string name="shop_default_theme">已切换到默认主题</string>
+
+    <string name="main_next_alarm">下一个闹钟: %s</string>
+    <string name="main_floating_pet_shown">已显示悬浮宠物</string>
+    <string name="main_floating_pet_hidden">已隐藏悬浮宠物</string>
+    <string name="main_level_format">Lv.%d</string>
+
+    <string name="pet_mood_format">心情: %s</string>
+    <string name="pet_level_format">等级: %d</string>
+    <string name="pet_exp_format">经验: %1$d/%2$d</string>
+    <string name="pet_interactions_format">交互次数: %d</string>
+
+    <string name="floating_pet_paused">已暂停</string>
+    <string name="floating_pet_break">休息中</string>
+    <string name="floating_pet_focusing">专注中</string>
+
+    <string name="pomodoro_focus_time_set">专注时长已设为%d分钟</string>
+    <string name="pomodoro_auto_break_toggled">自动开始休息已%s</string>
+    <string name="alarm_no_content">无内容</string>
+    <string name="countdown_zero_time">00:00</string>
+
+    <string name="menu_title_quick">快捷功能</string>
+    <string name="menu_start_pomodoro">开始番茄钟</string>
+    <string name="menu_view_pomodoro">查看番茄钟</string>
+    <string name="menu_set_alarm">闹钟设置</string>
+    <string name="menu_shop">经验商店</string>
+    <string name="menu_home">主界面</string>
+    <string name="menu_settings_floating">设置</string>
+
+    <string name="repeat_once_short">一次</string>
+    <string name="repeat_daily_short">每天</string>
+    <string name="repeat_workdays_short">工作日</string>
+    <string name="repeat_weekend_short">周末</string>
+    <string name="repeat_custom_short">自定义</string>
+
+    <string name="day_monday">周一</string>
+    <string name="day_tuesday">周二</string>
+    <string name="day_wednesday">周三</string>
+    <string name="day_thursday">周四</string>
+    <string name="day_friday">周五</string>
+    <string name="day_saturday">周六</string>
+    <string name="day_sunday">周日</string>
+
+    <string name="settings">设置</string>
+    <string name="time_default">00:00:00</string>
+    <string name="next_alarm_placeholder">下一个闹钟: --:--</string>
+    <string name="alarm">闹钟</string>
+    <string name="pomodoro">番茄钟</string>
+    <string name="pet">宠物</string>
+    <string name="countdown">倒计时</string>
+    <string name="floating_ball">悬浮球</string>
+    <string name="content_desc_settings">设置</string>
+    <string name="content_desc_back">返回</string>
+    <string name="content_desc_alarm">闹钟图标</string>
+    <string name="content_desc_pomodoro">番茄钟图标</string>
+    <string name="content_desc_pet">宠物图标</string>
+    <string name="content_desc_countdown">倒计时图标</string>
+    <string name="content_desc_floating_ball">悬浮球图标</string>
+    <string name="content_desc_shop">商店图标</string>
+    <string name="content_desc_item">物品图标</string>
+    <string name="content_desc_pet_floating">宠物</string>
+    <string name="content_desc_switch_alarm">闹钟开关</string>
+    <string name="content_desc_delete_alarm">删除闹钟</string>
+    <string name="pomodoro_focus_hint">正在专注的事情...</string>
+    <string name="pomodoro_default_time">25:00</string>
+    <string name="pomodoro_completed">完成番茄</string>
+    <string name="exp_gained">获得经验</string>
+    <string name="skip">跳过</string>
+    <string name="start">开始</string>
+    <string name="save">保存</string>
+    <string name="exp_shop">经验商店</string>
+    <string name="label_hint">标签</string>
+    <string name="pause">暂停</string>
+    <string name="reset">重置</string>
+    <string name="hello_message">你好!</string>
+    <string name="interact">互动</string>
+    <string name="feed">喂食</string>
+    <string name="play">玩耍</string>
+    <string name="pet_settings">宠物设置</string>
+    <string name="alarm_settings">闹钟设置</string>
+    <string name="reminder_settings">提醒设置</string>
+    <string name="data_management">数据管理</string>
+    <string name="export_data">导出数据</string>
+    <string name="import_data">导入数据</string>
+    <string name="exp_unit"> 经验</string>
+    <string name="unlock">兑换</string>
+    <string name="snooze">贪睡</string>
+    <string name="dismiss">关闭</string>
+    <string name="current_exp">当前经验: </string>
+    <string name="add_new_alarm">+ 新建</string>
+    <string name="alarm_empty_hint">暂无闹钟\n点击右上角新建闹钟</string>
+    <string name="alarm_time_colon">时间: </string>
+    <string name="repeat_colon">重复:</string>
+    <string name="break_ticket_default">使用休息券 (0分钟)</string>
+    <string name="exp_gained_default">+0</string>
+    <string name="shop_item_name_default">物品名称</string>
+    <string name="shop_item_desc_default">物品描述</string>
+    <string name="alarm_time_default">08:00</string>
+    <string name="time_separator"> : </string>
+    <string name="main_level_format_placeholder">Lv.1</string>
 </resources>

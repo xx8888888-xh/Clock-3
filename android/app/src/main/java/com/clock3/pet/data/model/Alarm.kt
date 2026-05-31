@@ -38,63 +38,59 @@ data class Alarm(
         val parts = time.split(":")
         if (parts.size != 2) return null
 
-        val targetTime = LocalTime.of(parts[0].toIntOrNull() ?: 8, parts[1].toIntOrNull() ?: 0)
+        val hour = parts[0].toIntOrNull()
+        val minute = parts[1].toIntOrNull()
+        if (hour == null || minute == null || hour !in 0..23 || minute !in 0..59) return null
+        val targetTime = LocalTime.of(hour, minute)
         var target = LocalDateTime.of(now.toLocalDate(), targetTime)
-
-        if (repeatType == RepeatType.ONCE) {
-            return if (target.isAfter(now)) target else null
-        }
 
         if (target.isBefore(now) || target.isEqual(now)) {
             target = target.plusDays(1)
         }
 
-        val weekdays = listOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
-            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
-        val weekendDays = listOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+        val maxAttempts = 365
 
         when (repeatType) {
+            RepeatType.ONCE -> {
+                return if (target.isAfter(now)) target else null
+            }
             RepeatType.DAILY -> {
-                while (target.isBefore(now) || target.isEqual(now)) {
-                    target = target.plusDays(1)
-                }
                 return target
             }
             RepeatType.WORKDAYS -> {
-                while (true) {
-                    if (target.dayOfWeek in weekdays && (target.isAfter(now) || target.isEqual(now))) {
+                var attempts = 0
+                while (attempts < maxAttempts) {
+                    if (target.dayOfWeek in WEEKDAYS && target.isAfter(now)) {
                         return target
                     }
                     target = target.plusDays(1)
+                    attempts++
                 }
+                return null
             }
             RepeatType.WEEKEND -> {
-                while (true) {
-                    if (target.dayOfWeek in weekendDays && (target.isAfter(now) || target.isEqual(now))) {
+                var attempts = 0
+                while (attempts < maxAttempts) {
+                    if (target.dayOfWeek in WEEKEND_DAYS && target.isAfter(now)) {
                         return target
                     }
                     target = target.plusDays(1)
+                    attempts++
                 }
+                return null
             }
             RepeatType.CUSTOM -> {
-                while (true) {
-                    if (repeatDays.contains(target.dayOfWeek.value) && (target.isAfter(now) || target.isEqual(now))) {
+                if (repeatDays.isEmpty()) return null
+                var attempts = 0
+                while (attempts < maxAttempts) {
+                    if (repeatDays.contains(target.dayOfWeek.value) && target.isAfter(now)) {
                         return target
                     }
                     target = target.plusDays(1)
+                    attempts++
                 }
+                return null
             }
-            else -> return target
-        }
-    }
-
-    fun shouldTriggerToday(): Boolean {
-        val today = LocalDateTime.now().dayOfWeek.value
-        return when (repeatType) {
-            RepeatType.ONCE, RepeatType.DAILY -> true
-            RepeatType.WORKDAYS -> today in 1..5
-            RepeatType.WEEKEND -> today in 6..7
-            RepeatType.CUSTOM -> repeatDays.contains(today)
         }
     }
 
@@ -114,7 +110,27 @@ data class Alarm(
         )
     }
 
+    fun toExportMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "label" to label,
+            "time" to time,
+            "content" to content,
+            "repeatType" to repeatType.value,
+            "repeatDays" to repeatDays,
+            "enabled" to enabled,
+            "snoozeCount" to snoozeCount,
+            "snoozeTime" to (snoozeTime ?: ""),
+            "createdAt" to (createdAt ?: ""),
+            "updatedAt" to (updatedAt ?: "")
+        )
+    }
+
     companion object {
+        private val WEEKDAYS = listOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
+        private val WEEKEND_DAYS = listOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+
         fun fromEntity(entity: AlarmEntity): Alarm {
             return Alarm(
                 id = entity.id,
@@ -128,6 +144,22 @@ data class Alarm(
                 snoozeTime = entity.snoozeTime,
                 createdAt = entity.createdAt,
                 updatedAt = entity.updatedAt
+            )
+        }
+
+        fun fromExportMap(map: Map<*, *>): Alarm {
+            return Alarm(
+                id = 0,
+                label = (map["label"] as? String) ?: "闹钟",
+                time = (map["time"] as? String) ?: "08:00",
+                content = (map["content"] as? String) ?: "",
+                repeatType = (map["repeatType"] as? String)?.let { RepeatType.fromValue(it) } ?: RepeatType.ONCE,
+                repeatDays = (map["repeatDays"] as? List<*>)?.mapNotNull { (it as? Number)?.toInt() } ?: emptyList(),
+                enabled = (map["enabled"] as? Boolean) ?: true,
+                snoozeCount = (map["snoozeCount"] as? Number)?.toInt() ?: 0,
+                snoozeTime = (map["snoozeTime"] as? String)?.let { if (it.isNotEmpty()) it else null },
+                createdAt = (map["createdAt"] as? String)?.let { if (it.isNotEmpty()) it else null },
+                updatedAt = (map["updatedAt"] as? String)?.let { if (it.isNotEmpty()) it else null }
             )
         }
     }

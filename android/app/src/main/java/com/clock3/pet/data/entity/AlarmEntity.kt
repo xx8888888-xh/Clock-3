@@ -1,9 +1,13 @@
 package com.clock3.pet.data.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "alarms")
+@Entity(
+    tableName = "alarms",
+    indices = [Index(value = ["enabled"])]
+)
 data class AlarmEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

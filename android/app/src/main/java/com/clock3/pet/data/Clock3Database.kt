@@ -31,15 +31,11 @@ abstract class Clock3Database : RoomDatabase() {
 
         fun getDatabase(context: Context): Clock3Database {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     Clock3Database::class.java,
                     "clock3_database"
-                )
-                    .fallbackToDestructiveMigration()
-                    .build()
-                INSTANCE = instance
-                instance
+                ).build().also { INSTANCE = it }
             }
         }
     }

@@ -1,80 +1,102 @@
 package com.clock3.pet.receiver
 
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.RingtoneManager
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
+import com.clock3.pet.R
 import com.clock3.pet.data.repository.Clock3Repository
+import com.clock3.pet.service.AlarmService
 import com.clock3.pet.service.NotificationService
+import com.clock3.pet.ui.AlarmActivity
+import com.clock3.pet.utils.AppLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == "com.clock3.pet.ALARM_TRIGGER") {
-            val alarmId = intent.getLongExtra("alarm_id", -1)
-            val alarmLabel = intent.getStringExtra("alarm_label") ?: "闹钟"
-            val alarmContent = intent.getStringExtra("alarm_content") ?: ""
-            val alarmTime = intent.getStringExtra("alarm_time") ?: ""
+        if (intent.action != AlarmService.ALARM_TRIGGER_ACTION) return
 
-            val repository = Clock3Repository(context)
-            val notificationService = NotificationService.getInstance(context)
+        val alarmId = intent.getLongExtra("alarm_id", -1)
+        if (alarmId == -1L) return
 
-            val alarm = com.clock3.pet.data.model.Alarm(
-                id = alarmId,
-                label = alarmLabel,
-                content = alarmContent,
-                time = alarmTime
-            )
+        val alarmLabel = intent.getStringExtra("alarm_label") ?: context.getString(R.string.alarm_default_label)
+        val alarmContent = intent.getStringExtra("alarm_content") ?: ""
+        val alarmTime = intent.getStringExtra("alarm_time") ?: ""
+        val alarmRepeatType = intent.getStringExtra("alarm_repeat_type") ?: "once"
+        val alarmEnabled = intent.getBooleanExtra("alarm_enabled", true)
 
-            notificationService.showAlarmNotification(alarm)
+        val notificationService = NotificationService.getInstance(context)
+        val alarmService = AlarmService.getInstance(context)
 
-            if (repository.getConfig("vibration_enabled", true) as Boolean) {
-                vibrate(context)
+        val fallbackAlarm = com.clock3.pet.data.model.Alarm(
+            id = alarmId,
+            label = alarmLabel,
+            content = alarmContent,
+            time = alarmTime,
+            repeatType = com.clock3.pet.data.model.Alarm.RepeatType.fromValue(alarmRepeatType),
+            enabled = alarmEnabled
+        )
+
+        var alarm = fallbackAlarm
+        val pendingResult = goAsync()
+        val supervisorJob = SupervisorJob()
+        CoroutineScope(supervisorJob + Dispatchers.IO).launch {
+            try {
+                withTimeout(9000) {
+                    val dbAlarm = Clock3Repository(context.applicationContext).getAlarmById(alarmId)
+                    if (dbAlarm != null) {
+                        alarm = dbAlarm
+                    } else {
+                        AppLog.w(TAG, "Alarm id=$alarmId not found in DB, using Intent extras as fallback")
+                    }
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load alarm from DB, using Intent extras", e)
+            } finally {
+                supervisorJob.cancel()
+                handleAlarm(context, alarm, notificationService, alarmService)
+                pendingResult.finish()
             }
-
-            if (repository.getConfig("sound_enabled", true) as Boolean) {
-                playSound(context)
-            }
-
-            val ringtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            val ringtonePlayer = RingtoneManager.getRingtone(context, ringtone)
-            ringtonePlayer?.play()
         }
     }
 
-    private fun vibrate(context: Context) {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    private fun handleAlarm(
+        context: Context,
+        alarm: com.clock3.pet.data.model.Alarm,
+        notificationService: NotificationService,
+        alarmService: AlarmService
+    ) {
+        if (alarmService.isSleepModeEnabled()) {
+            notificationService.showAlarmNotification(alarm, fullScreenPendingIntent = null, silent = true)
+            return
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(
-                VibrationEffect.createWaveform(
-                    longArrayOf(0, 500, 200, 500, 200, 500),
-                    -1
-                )
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(longArrayOf(0, 500, 200, 500, 200, 500), -1)
+        val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
+            action = ACTION_ALARM_TRIGGER
+            putExtra("alarm_id", alarm.id)
+            putExtra("alarm_label", alarm.label)
+            putExtra("alarm_content", alarm.content)
+            putExtra("alarm_time", alarm.time)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
+
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            context,
+            alarm.id.toInt() + FULL_SCREEN_PENDING_OFFSET,
+            fullScreenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        notificationService.showAlarmNotification(alarm, fullScreenPendingIntent)
     }
 
-    private fun playSound(context: Context) {
-        try {
-            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val ringtone = RingtoneManager.getRingtone(context, alarmUri)
-            ringtone?.play()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+    companion object {
+        private const val TAG = "AlarmReceiver"
+        const val ACTION_ALARM_TRIGGER = "alarm"
+        const val FULL_SCREEN_PENDING_OFFSET = 500000
     }
 }

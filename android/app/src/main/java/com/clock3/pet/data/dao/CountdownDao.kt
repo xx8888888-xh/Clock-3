@@ -6,6 +6,15 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CountdownDao {
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(countdowns: List<CountdownEntity>)
+
+    @Transaction
+    suspend fun importCountdowns(countdowns: List<CountdownEntity>) {
+        deleteAllCountdowns()
+        insertAll(countdowns)
+    }
     @Query("SELECT * FROM countdowns ORDER BY targetTime ASC")
     fun getAllCountdowns(): Flow<List<CountdownEntity>>
 
@@ -24,15 +33,12 @@ interface CountdownDao {
     @Update
     suspend fun updateCountdown(countdown: CountdownEntity)
 
-    @Delete
-    suspend fun deleteCountdown(countdown: CountdownEntity)
-
     @Query("DELETE FROM countdowns WHERE id = :id")
     suspend fun deleteCountdownById(id: Long)
 
     @Query("UPDATE countdowns SET status = :status WHERE id = :id")
     suspend fun setCountdownStatus(id: Long, status: String)
 
-    @Query("UPDATE countdowns SET remainingSeconds = :seconds WHERE id = :id")
-    suspend fun setRemainingSeconds(id: Long, seconds: Int)
+    @Query("DELETE FROM countdowns")
+    suspend fun deleteAllCountdowns()
 }

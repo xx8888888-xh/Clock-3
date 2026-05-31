@@ -3,9 +3,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="12dp"
+    android:padding="16dp"
     android:gravity="center_vertical"
-    android:background="@color/surface">
+    android:background="@drawable/card_background"
+    android:layout_margin="6dp"
+    android:elevation="0dp">
 
     <LinearLayout
         android:layout_width="0dp"
@@ -17,8 +19,8 @@
             android:id="@+id/alarmTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="08:00"
-            android:textSize="20sp"
+            android:text="@string/alarm_time_default"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"/>
 
@@ -26,32 +28,35 @@
             android:id="@+id/alarmLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="闹钟名称"
+            android:text="@string/alarm_label"
             android:textSize="14sp"
-            android:textColor="@color/text_secondary"/>
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="2dp"/>
 
         <TextView
             android:id="@+id/alarmContent"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="提醒内容"
+            android:text="@string/alarm_content"
             android:textSize="12sp"
-            android:textColor="@color/text_hint"/>
+            android:textColor="@color/text_hint"
+            android:layout_marginTop="2dp"/>
 
     </LinearLayout>
 
-    <Switch
+    <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/alarmEnabled"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="8dp"/>
+        android:layout_marginHorizontal="8dp"
+        android:contentDescription="@string/content_desc_switch_alarm"/>
 
-    <Button
+    <ImageButton
         android:id="@+id/deleteButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:text="🗑️"
-        android:backgroundTint="@color/error"
-        android:padding="0dp"/>
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@drawable/ic_delete"
+        android:background="@drawable/card_button_secondary"
+        android:contentDescription="@string/content_desc_delete_alarm"/>
 
 </LinearLayout>

@@ -1,20 +1,23 @@
 package com.clock3.pet.ui
 
 import android.os.Bundle
-import android.widget.*
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.clock3.pet.R
 import com.clock3.pet.data.model.Pet
 import com.clock3.pet.data.repository.Clock3Repository
 import com.clock3.pet.service.PetService
+import com.clock3.pet.utils.ThemeManager
+import com.clock3.pet.widget.CirclePetView
 import kotlinx.coroutines.launch
 
 class PetActivity : AppCompatActivity() {
     private lateinit var repository: Clock3Repository
     private lateinit var petService: PetService
-
-    private lateinit var petImage: ImageView
+    private lateinit var petImage: CirclePetView
     private lateinit var petName: TextView
     private lateinit var moodText: TextView
     private lateinit var levelText: TextView
@@ -24,6 +27,7 @@ class PetActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemeManager.applyTheme(this, ThemeManager.getCurrentTheme(this))
         setContentView(R.layout.activity_pet)
 
         repository = Clock3Repository(this)
@@ -45,30 +49,26 @@ class PetActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        findViewById<Button>(R.id.backButton).setOnClickListener { finish() }
+        findViewById<LinearLayout>(R.id.backButton).setOnClickListener { finish() }
 
-        findViewById<Button>(R.id.interactButton).setOnClickListener {
-            lifecycleScope.launch {
-                val result = petService.interact()
-                showResult(result)
-                loadPetData()
-            }
+        findViewById<LinearLayout>(R.id.interactButton).setOnClickListener {
+            performAction { petService.interact() }
         }
 
-        findViewById<Button>(R.id.feedButton).setOnClickListener {
-            lifecycleScope.launch {
-                val result = petService.feedPet()
-                showResult(result)
-                loadPetData()
-            }
+        findViewById<LinearLayout>(R.id.feedButton).setOnClickListener {
+            performAction { petService.feedPet() }
         }
 
-        findViewById<Button>(R.id.playButton).setOnClickListener {
-            lifecycleScope.launch {
-                val result = petService.playWithPet()
-                showResult(result)
-                loadPetData()
-            }
+        findViewById<LinearLayout>(R.id.playButton).setOnClickListener {
+            performAction { petService.playWithPet() }
+        }
+    }
+
+    private fun performAction(action: suspend () -> Map<String, Any>) {
+        lifecycleScope.launch {
+            val result = action()
+            showResult(result)
+            loadPetData()
         }
     }
 
@@ -80,33 +80,34 @@ class PetActivity : AppCompatActivity() {
     }
 
     private fun updateUI(pet: Pet) {
-        petName.text = "${pet.mood.emoji} ${pet.name}"
-        moodText.text = "心情: ${getMoodName(pet.mood)}"
-        levelText.text = "等级: ${pet.level}"
-        expText.text = "经验: ${pet.exp}/${pet.getExpForNextLevel()}"
+        petName.text = pet.name
+        moodText.text = getString(R.string.pet_mood_format, getMoodName(pet.mood))
+        levelText.text = getString(R.string.pet_level_format, pet.level)
+        expText.text = getString(R.string.pet_exp_format, pet.exp, pet.getExpForNextLevel())
         messageText.text = pet.getRandomMessage()
-        interactionsText.text = "交互次数: ${pet.totalInteractions}"
+        interactionsText.text = getString(R.string.pet_interactions_format, pet.totalInteractions)
+        petImage.setMood(PetMoodMapper.map(pet.mood))
     }
 
     private fun getMoodName(mood: Pet.PetMood): String {
-        return when (mood) {
-            Pet.PetMood.HAPPY -> "开心 😊"
-            Pet.PetMood.SAD -> "难过 😢"
-            Pet.PetMood.SLEEPY -> "困倦 😴"
-            Pet.PetMood.EXCITED -> "兴奋 🤩"
-            Pet.PetMood.HUNGRY -> "饥饿 🤤"
-            Pet.PetMood.BORED -> "无聊 😐"
-        }
+        return getString(when (mood) {
+            Pet.PetMood.HAPPY -> R.string.mood_happy
+            Pet.PetMood.SAD -> R.string.mood_sad
+            Pet.PetMood.SLEEPY -> R.string.mood_sleepy
+            Pet.PetMood.EXCITED -> R.string.mood_excited
+            Pet.PetMood.HUNGRY -> R.string.mood_hungry
+            Pet.PetMood.BORED -> R.string.mood_bored
+        })
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun showResult(result: Map<String, Any>) {
         val message = result["message"] as? String ?: ""
         messageText.text = message
 
-        val levelUp = result["level_up"] as? List<String>
+        val levelUp = result["level_up"] as? List<*>
         if (!levelUp.isNullOrEmpty()) {
-            Toast.makeText(this, levelUp.joinToString("\n"), Toast.LENGTH_SHORT).show()
+            val messages = levelUp.mapNotNull { it as? String }
+            Toast.makeText(this, messages.joinToString("\n"), Toast.LENGTH_SHORT).show()
         }
     }
 }

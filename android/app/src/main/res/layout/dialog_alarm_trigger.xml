@@ -3,28 +3,28 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:background="@color/black">
+    android:padding="28dp"
+    android:background="@drawable/alarm_trigger_background">
 
     <TextView
         android:id="@+id/alarmLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="⏰ 闹钟"
-        android:textSize="32sp"
+        android:text="@string/alarm"
+        android:textSize="34sp"
         android:textStyle="bold"
-        android:textColor="@color/white"/>
+        android:textColor="@color/background"/>
 
     <TextView
         android:id="@+id/alarmContent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="时间到了!"
+        android:text="@string/notification_alarm_text"
         android:textSize="20sp"
-        android:textColor="@color/text_hint"
-        android:layout_marginVertical="16dp"/>
+        android:textColor="@color/alarm_text_secondary"
+        android:layout_marginVertical="20dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -32,23 +32,49 @@
         android:orientation="horizontal"
         android:gravity="center">
 
-        <Button
+        <LinearLayout
             android:id="@+id/btnSnooze"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="52dp"
             android:layout_weight="1"
-            android:text="💤 贪睡"
-            android:backgroundTint="#666666"
-            android:layout_margin="8dp"/>
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_margin="6dp"
+            android:background="@drawable/card_button_secondary"
+            android:clickable="true"
+            android:focusable="true">
 
-        <Button
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/snooze"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"/>
+
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btnDismiss"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="52dp"
             android:layout_weight="1"
-            android:text="✓ 关闭"
-            android:backgroundTint="@color/success"
-            android:layout_margin="8dp"/>
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_margin="6dp"
+            android:background="@drawable/card_button_secondary"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/dismiss"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 

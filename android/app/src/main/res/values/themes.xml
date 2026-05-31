@@ -1,82 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-
     <style name="Theme.Clock3" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorAccent">@color/accent</item>
         <item name="android:colorBackground">@color/background</item>
-        <item name="android:statusBarColor">@color/primary_dark</item>
-        <item name="android:navigationBarColor">@color/primary_dark</item>
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:navigationBarColor">@color/background</item>
         <item name="android:windowBackground">@color/background</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorOnSecondary">@color/text_primary</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
     </style>
 
     <style name="Theme.Clock3.Alarm" parent="Theme.Clock3">
         <item name="android:windowFullscreen">false</item>
-        <item name="android:colorBackground">@color/black</item>
-        <item name="android:windowBackground">@color/black</item>
+        <item name="android:colorBackground">@color/text_primary</item>
+        <item name="android:windowBackground">@color/text_primary</item>
     </style>
 
-    <style name="CardStyle">
-        <item name="cardCornerRadius">12dp</item>
-        <item name="cardElevation">4dp</item>
-        <item name="cardBackgroundColor">@color/card_background</item>
+    <style name="Theme.Clock3.CherryBlossom" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/cherry_primary</item>
+        <item name="colorPrimaryDark">@color/cherry_accent</item>
+        <item name="colorAccent">@color/cherry_accent</item>
+        <item name="android:colorBackground">@color/cherry_background</item>
+        <item name="android:statusBarColor">@color/cherry_secondary</item>
+        <item name="android:navigationBarColor">@color/cherry_background</item>
+        <item name="android:windowBackground">@color/cherry_background</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="colorSurface">@color/cherry_secondary</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSecondary">@color/cherry_accent</item>
+        <item name="colorOnSecondary">@color/text_primary</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
     </style>
 
-    <style name="ButtonStyle" parent="Widget.MaterialComponents.Button">
-        <item name="android:textSize">16sp</item>
+    <style name="Theme.Clock3.Ocean" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/ocean_primary</item>
+        <item name="colorPrimaryDark">@color/ocean_accent</item>
+        <item name="colorAccent">@color/ocean_accent</item>
+        <item name="android:colorBackground">@color/ocean_background</item>
+        <item name="android:statusBarColor">@color/ocean_secondary</item>
+        <item name="android:navigationBarColor">@color/ocean_background</item>
+        <item name="android:windowBackground">@color/ocean_background</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="colorSurface">@color/ocean_secondary</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSecondary">@color/ocean_accent</item>
+        <item name="colorOnSecondary">@color/text_primary</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
     </style>
 
-    <style name="ButtonStyle.Primary">
-        <item name="android:backgroundTint">@color/primary</item>
-        <item name="android:textColor">@color/white</item>
-        <item name="android:textSize">16sp</item>
-        <item name="cornerRadius">8dp</item>
+    <style name="Theme.Clock3.Forest" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/forest_primary</item>
+        <item name="colorPrimaryDark">@color/forest_accent</item>
+        <item name="colorAccent">@color/forest_accent</item>
+        <item name="android:colorBackground">@color/forest_background</item>
+        <item name="android:statusBarColor">@color/forest_secondary</item>
+        <item name="android:navigationBarColor">@color/forest_background</item>
+        <item name="android:windowBackground">@color/forest_background</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="colorSurface">@color/forest_secondary</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSecondary">@color/forest_accent</item>
+        <item name="colorOnSecondary">@color/text_primary</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
     </style>
 
-    <style name="ButtonStyle.Secondary">
-        <item name="android:backgroundTint">@color/text_secondary</item>
-        <item name="android:textColor">@color/white</item>
-        <item name="android:textSize">16sp</item>
-        <item name="cornerRadius">8dp</item>
+    <style name="Theme.Clock3.Night" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/night_accent</item>
+        <item name="colorPrimaryDark">@color/night_primary</item>
+        <item name="colorAccent">@color/night_accent</item>
+        <item name="android:colorBackground">@color/night_background</item>
+        <item name="android:statusBarColor">@color/night_primary</item>
+        <item name="android:navigationBarColor">@color/night_background</item>
+        <item name="android:windowBackground">@color/night_background</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="colorSurface">@color/night_secondary</item>
+        <item name="colorOnSurface">@color/night_text_primary</item>
+        <item name="colorSecondary">@color/night_accent</item>
+        <item name="colorOnSecondary">@color/night_text_primary</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:textColorPrimary">@color/night_text_primary</item>
+        <item name="android:textColorSecondary">@color/night_text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
     </style>
-
-    <style name="ButtonStyle.Danger">
-        <item name="android:backgroundTint">@color/error</item>
-        <item name="android:textColor">@color/white</item>
-        <item name="android:textSize">16sp</item>
-        <item name="cornerRadius">8dp</item>
-    </style>
-
-    <style name="TextStyle" parent="TextAppearance.Material3.BodyLarge">
-        <item name="android:textSize">16sp</item>
-    </style>
-
-    <style name="TextStyle.Title">
-        <item name="android:textSize">24sp</item>
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <style name="TextStyle.Subtitle">
-        <item name="android:textSize">18sp</item>
-        <item name="android:textColor">@color/text_primary</item>
-    </style>
-
-    <style name="TextStyle.Body">
-        <item name="android:textSize">16sp</item>
-        <item name="android:textColor">@color/text_secondary</item>
-    </style>
-
-    <style name="TextStyle.Caption">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/text_hint</item>
-    </style>
-
-    <style name="EditTextStyle">
-        <item name="android:background">@drawable/edit_text_background</item>
-        <item name="android:padding">12dp</item>
-        <item name="android:textSize">16sp</item>
-    </style>
-
 </resources>
